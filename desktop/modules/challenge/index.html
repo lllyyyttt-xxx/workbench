@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>随机挑战</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #f5f6fa; color: #3a3a3a; min-height: 100vh;
+  }
+  .topbar {
+    background: #fff; border-bottom: 1px solid #e9ecf2; padding: 0 24px;
+    display: flex; align-items: center; gap: 18px; height: 56px; position: sticky; top: 0; z-index: 20;
+  }
+  .back-home {
+    font-size: 13px; color: #5b6b8c; text-decoration: none; padding: 5px 11px;
+    border: 1px solid #dde3ee; border-radius: 6px; flex-shrink: 0;
+  }
+  .back-home:hover { background: #f0f4fa; }
+  .topbar h1 { font-size: 17px; font-weight: 600; color: #2f3542; }
+  .tabs { display: flex; gap: 4px; margin-left: 12px; }
+  .tab {
+    padding: 7px 16px; border-radius: 7px; font-size: 14px; cursor: pointer;
+    color: #7b8698; border: none; background: none; font-family: inherit;
+  }
+  .tab:hover { background: #f2f5fa; }
+  .tab.active { background: #e5ebf7; color: #3d5a8f; font-weight: 600; }
+
+  .page { max-width: 900px; margin: 0 auto; padding: 24px 24px 70px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .card {
+    background: #fff; border: 1px solid #e9ecf2; border-radius: 14px; padding: 20px 22px;
+  }
+  .card + .card { margin-top: 16px; }
+  .card-title {
+    font-size: 13px; color: #8d97a8; font-weight: 500; margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+
+  /* 抽挑战的舞台 */
+  .stage { text-align: center; padding: 22px 10px 8px; }
+  .stage .question { font-size: 13px; color: #97a1b2; margin-bottom: 18px; }
+
+  /* 抽之前：四档按钮 */
+  .tiers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 640px; margin: 0 auto; }
+  .tier {
+    border: 1px solid #e2e8f2; background: #fff; border-radius: 12px; padding: 16px 10px;
+    cursor: pointer; font-family: inherit; text-align: center; transition: all .16s;
+  }
+  .tier:hover { border-color: #a8bcd9; background: #f8fafd; transform: translateY(-2px); }
+  .tier:hover .tier-name { color: #3d5a8f; }
+  .tier-name { font-size: 14.5px; color: #3a4657; font-weight: 600; margin-bottom: 4px; }
+  .tier-dur { font-size: 12px; color: #99a3b4; }
+  .tier-count { font-size: 11px; color: #c0c8d4; margin-top: 5px; }
+
+  /* 抽之后：挑战卡 */
+  .challenge {
+    max-width: 560px; margin: 0 auto; background: linear-gradient(160deg, #fdfdff, #f4f7fc);
+    border: 1px solid #dfe6f1; border-radius: 16px; padding: 26px 24px;
+    box-shadow: 0 6px 24px rgba(61,90,143,.07);
+  }
+  .challenge .tier-badge {
+    display: inline-block; font-size: 11.5px; color: #6b81a8; background: #eaf0f9;
+    padding: 3px 11px; border-radius: 10px; margin-bottom: 14px;
+  }
+  .challenge .text {
+    font-size: 19px; line-height: 1.6; color: #2f3542; font-weight: 600; margin-bottom: 8px;
+  }
+  .challenge .criteria { font-size: 13px; color: #8d97a8; line-height: 1.65; margin-bottom: 20px; }
+  .challenge .acts { display: flex; gap: 10px; justify-content: center; }
+  .btn {
+    border: 1px solid #e2e8f2; background: #fff; color: #5b6b8c; border-radius: 9px;
+    padding: 9px 22px; font-size: 14px; cursor: pointer; font-family: inherit; transition: all .15s;
+  }
+  .btn:hover { border-color: #b9c7dd; background: #f7f9fd; }
+  .btn.done { background: #4c7a4f; border-color: #4c7a4f; color: #fff; }
+  .btn.done:hover { background: #406a43; }
+  .btn.give { color: #a08070; }
+  .btn.give:hover { border-color: #d8c4b8; background: #fdf8f5; }
+  .btn.again { color: #6b81a8; }
+
+  /* 统计条 */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .stat { background: #fff; border: 1px solid #e9ecf2; border-radius: 12px; padding: 14px 16px; text-align: center; }
+  .stat .label { font-size: 12px; color: #99a3b4; margin-bottom: 7px; }
+  .stat .value { font-size: 24px; font-weight: 700; color: #2f3542; line-height: 1.1; }
+  .stat .value small { font-size: 12px; font-weight: 400; color: #99a3b4; margin-left: 2px; }
+  .stat.streak .value { color: #d08a3a; }
+
+  /* 记录列表 */
+  .rec-list { list-style: none; }
+  .rec {
+    display: flex; align-items: flex-start; gap: 11px; padding: 12px 0;
+    border-bottom: 1px solid #f3f5f9; font-size: 14px;
+  }
+  .rec:last-child { border-bottom: none; }
+  .rec .mark {
+    width: 7px; height: 7px; border-radius: 50%; margin-top: 8px; flex-shrink: 0;
+  }
+  .rec .mark.ok { background: #6a9a6d; }
+  .rec .mark.give { background: #d0b8a8; }
+  .rec .body { flex: 1; min-width: 0; }
+  .rec .txt { color: #3a4657; line-height: 1.55; }
+  .rec .txt.given { color: #a8aeb8; text-decoration: line-through; }
+  .rec .meta { font-size: 12px; color: #a8b2c1; margin-top: 3px; }
+  .rec .state { font-size: 12px; flex-shrink: 0; margin-top: 1px; }
+  .rec .state.ok { color: #6a9a6d; }
+  .rec .state.give { color: #b8a090; }
+
+  .empty-tip { font-size: 13px; color: #b0b8c4; padding: 20px 0; text-align: center; }
+
+  .add-row { display: flex; gap: 9px; margin-top: 12px; flex-wrap: wrap; }
+  .add-row input[type="text"] {
+    flex: 1; min-width: 180px; border: 1px solid #e2e8f2; border-radius: 8px;
+    padding: 8px 12px; font-size: 13.5px; font-family: inherit; outline: none;
+  }
+  .add-row input[type="text"]:focus { border-color: #a8bcd9; }
+  .add-row select {
+    border: 1px solid #e2e8f2; border-radius: 8px; padding: 8px 10px;
+    font-size: 13px; font-family: inherit; background: #fff; color: #5b6b8c; outline: none;
+  }
+  .add-row button {
+    border: 1px solid #e2e8f2; background: #fff; color: #5b6b8c; border-radius: 8px;
+    padding: 8px 18px; font-size: 13.5px; cursor: pointer; font-family: inherit;
+  }
+  .add-row button:hover { border-color: #b9c7dd; background: #f7f9fd; }
+
+  .chance-title { font-size: 12.5px; color: #8d97a8; margin: 16px 0 8px; }
+  .chance-list { display: flex; flex-direction: column; gap: 6px; }
+  .chance-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+    background: #fafbfd; border-radius: 8px; font-size: 13.5px;
+  }
+  .chance-item .t { flex: 1; color: #3a4657; }
+  .chance-item .d { font-size: 12px; color: #a8b2c1; flex-shrink: 0; }
+  .chance-item .del {
+    border: 0; background: none; color: #c8a8a8; font-size: 12px; cursor: pointer;
+    padding: 2px 6px; font-family: inherit;
+  }
+  .chance-item .del:hover { color: #c62828; }
+</style>
+  <link rel="stylesheet" href="../../shared/dock.css">
+<link rel="stylesheet" href="../../shared/remind.css">
+<link rel="stylesheet" href="../../shared/settings.css">
+<link rel="stylesheet" href="../../shared/rail.css">
+  <link rel="stylesheet" href="../../shared/theme.css">
+  <style>
+    /* 液态玻璃统一主题（2026-10-27）：只换材质，布局、尺寸、配色关系一律不动 */
+    .topbar {
+      background: var(--wb-glass-bg-soft);
+      border-bottom: 1px solid var(--wb-glass-line-soft);
+      backdrop-filter: var(--wb-glass-blur);
+      -webkit-backdrop-filter: var(--wb-glass-blur);
+    }
+    .card, .stat, .tier {
+      background: var(--wb-glass-bg);
+      border: 1px solid var(--wb-glass-line);
+      backdrop-filter: var(--wb-glass-blur);
+      -webkit-backdrop-filter: var(--wb-glass-blur);
+      box-shadow: var(--wb-glass-shadow);
+    }
+    .btn, .add-row button {
+      background: var(--wb-glass-bg-soft);
+      border-color: var(--wb-glass-line-soft);
+      backdrop-filter: blur(14px) saturate(150%);
+      -webkit-backdrop-filter: blur(14px) saturate(150%);
+    }
+  </style>
+</head>
+<body data-rail-current="challenge" class="has-wrail">
+
+<div class="topbar">
+  <h1>随机挑战</h1>
+  <div class="tabs">
+    <button class="tab active" data-tab="draw">抽取</button>
+    <button class="tab" data-tab="records">记录</button>
+    <button class="tab" data-tab="pool">题池</button>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- 抽取 -->
+  <div class="view active" id="viewDraw">
+    <div class="stats" id="statsBar"></div>
+
+    <div class="card">
+      <div class="stage" id="stage">
+        <div class="question">想抽哪一档？抽到就必须做，不许换</div>
+        <div class="tiers" id="tiers"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 记录 -->
+  <div class="view" id="viewRecords">
+    <div class="card">
+      <div class="card-title">
+        <span>挑战记录</span>
+        <span id="recCount"></span>
+      </div>
+      <ul class="rec-list" id="recList"></ul>
+    </div>
+  </div>
+
+  <!-- 题池 -->
+  <div class="view" id="viewPool">
+    <div class="card">
+      <div class="card-title">
+        <span>题池</span>
+        <span id="poolCount"></span>
+      </div>
+      <div class="chance-list" id="poolList" style="margin-bottom:16px;"></div>
+      <div class="add-row">
+        <input type="text" id="newText" placeholder="加一条挑战，比如：读十页书并写三句话总结">
+        <select id="newTier">
+          <option value="1">一分钟</option>
+          <option value="2">十分钟</option>
+          <option value="3" selected>一小时</option>
+          <option value="4">一整天</option>
+        </select>
+        <input type="text" id="newCrit" placeholder="完成标准（可不填）" style="min-width:200px;">
+        <button id="btnAdd">加进去</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>说明</span></div>
+      <p style="font-size:13px;color:#8d97a8;line-height:1.8;">
+        抽到就算数，完成或放弃都记一笔，不用提交证明。<br>
+        同一个挑战短期内不会被重复抽到。<br>
+        同一档连完五轮，这一档的难度会往上走一档。
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<script src="../../shared/store.js"></script>
+<script src="app.js"></script>
+<script src="../../modules.js"></script>
+<script src="../../shared/side.js"></script>
+<script src="../../shared/rail.js"></script>
+<script src="../../shared/dock.js"></script>
+<script src="../../shared/remind.js"></script>
+<script src="../../shared/settings.js"></script>
+<script src="../../shared/sync.js"></script>
+</body>
+</html>

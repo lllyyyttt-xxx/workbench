@@ -1,0 +1,94 @@
+/* 全站统一主题：浅色液态玻璃
+ *
+ * 首页那套视觉（彩色光斑背景 + 半透明磨砂玻璃面板）本来只写在 index.html 里，
+ * 七个模块页各写各的纯色卡片，导致点进去像换了个软件。这份文件把底座抽出来共用。
+ *
+ * 用法：页面里在 rail.css 之后引用
+ *   <link rel="stylesheet" href="../../shared/theme.css">
+ * 页面 body 只要有 has-wrail 类就会自动套上背景，不用再改别的。
+ *
+ * 想给某个面板做成玻璃，在页面自己的 CSS 里直接用它自己的类名写：
+ *   .你的面板类名 {
+ *     background: var(--wb-glass-bg);
+ *     border: 1px solid var(--wb-glass-line);
+ *     backdrop-filter: var(--wb-glass-blur);
+ *     -webkit-backdrop-filter: var(--wb-glass-blur);
+ *     box-shadow: var(--wb-glass-shadow);
+ *   }
+ * 也可以直接给元素加 class="wb-glass"。
+ *
+ * 注意：玻璃要背后有颜色和光斑才透得出来。所以这里是"背景光斑 + 半透明白"，
+ * 不是纯白底套一层虚化——纯白背景上看不出任何效果。
+ */
+
+:root {
+  /* 文字 */
+  --wb-ink: #2b2b2b;
+  --wb-ink-soft: #5a6472;
+  --wb-ink-dim: #8a93a1;
+  --wb-ink-faint: #a8b0bc;
+
+  /* 玻璃 */
+  --wb-glass-bg: rgba(255, 255, 255, .62);
+  --wb-glass-bg-soft: rgba(255, 255, 255, .46);
+  --wb-glass-bg-strong: rgba(255, 255, 255, .80);
+  --wb-glass-line: rgba(255, 255, 255, .82);
+  --wb-glass-line-soft: rgba(255, 255, 255, .58);
+  --wb-glass-blur: blur(24px) saturate(170%);
+  --wb-glass-shadow:
+    0 1px 4px rgba(31, 38, 52, .05),
+    0 10px 30px rgba(31, 38, 52, .07),
+    inset 0 1px 0 rgba(255, 255, 255, .9);
+  --wb-glass-shadow-sm:
+    0 1px 3px rgba(31, 38, 52, .05),
+    inset 0 1px 0 rgba(255, 255, 255, .9);
+
+  /* 主色与提示 */
+  --wb-accent: #7e57c2;
+  --wb-accent-soft: rgba(126, 87, 194, .10);
+  --wb-warn: #e07b39;
+
+  /* 页面底色（玻璃透出来的基准色） */
+  --wb-canvas: #f2f4f9;
+}
+
+/* 模块页统一背景。用 body.has-wrail 是为了压过各页面自己的 body{background} */
+body.has-wrail {
+  background-color: var(--wb-canvas);
+  background-image:
+    radial-gradient(1200px 700px at 12% -5%, rgba(180, 200, 255, .55), transparent 60%),
+    radial-gradient(1000px 620px at 92% 8%, rgba(255, 205, 225, .50), transparent 62%),
+    radial-gradient(900px 700px at 50% 105%, rgba(190, 235, 220, .45), transparent 60%),
+    linear-gradient(160deg, #f4f6fb 0%, #eef1f8 50%, #f6f4f9 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  color: var(--wb-ink);
+}
+
+/* 通用玻璃面板 */
+.wb-glass {
+  background: var(--wb-glass-bg);
+  border: 1px solid var(--wb-glass-line);
+  backdrop-filter: var(--wb-glass-blur);
+  -webkit-backdrop-filter: var(--wb-glass-blur);
+  box-shadow: var(--wb-glass-shadow);
+  border-radius: 20px;
+}
+
+/* 轻量玻璃：按钮、小标签这类，别做太厚 */
+.wb-glass-sm {
+  background: var(--wb-glass-bg-soft);
+  border: 1px solid var(--wb-glass-line-soft);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: var(--wb-glass-shadow-sm);
+}
+
+/* 顶栏：和首页一致，玻璃条压在页面最上面 */
+body.has-wrail > header,
+body.has-wrail > .topbar {
+  background: var(--wb-glass-bg-soft);
+  border-bottom: 1px solid var(--wb-glass-line-soft);
+  backdrop-filter: var(--wb-glass-blur);
+  -webkit-backdrop-filter: var(--wb-glass-blur);
+}

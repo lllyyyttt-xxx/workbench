@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>随手记</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #f7f8f6; color: #3a3a3a; min-height: 100vh;
+  }
+  .topbar {
+    background: #fff; border-bottom: 1px solid #e8ece6; padding: 0 24px;
+    display: flex; align-items: center; gap: 18px; height: 56px; position: sticky; top: 0; z-index: 20;
+  }
+  .back-home {
+    font-size: 13px; color: #5d7a5d; text-decoration: none; padding: 5px 11px;
+    border: 1px solid #dfe8de; border-radius: 6px; flex-shrink: 0;
+  }
+  .back-home:hover { background: #f0f5ef; }
+  .topbar h1 { font-size: 17px; font-weight: 600; color: #2f3a2f; }
+  .tabs { display: flex; gap: 4px; margin-left: 12px; }
+  .tab {
+    padding: 7px 16px; border-radius: 7px; font-size: 14px; cursor: pointer;
+    color: #7d8a7d; border: none; background: none; font-family: inherit;
+  }
+  .tab:hover { background: #f2f6f1; }
+  .tab.active { background: #e4efe3; color: #3f6b40; font-weight: 600; }
+
+  .page { max-width: 860px; margin: 0 auto; padding: 24px 24px 70px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .card {
+    background: #fff; border: 1px solid #e8ece6; border-radius: 13px; padding: 18px 20px;
+  }
+  .card + .card { margin-top: 15px; }
+  .card-title {
+    font-size: 13px; color: #8d9a8d; font-weight: 500; margin-bottom: 13px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+
+  /* 灵感：一个大输入框 */
+  .quick-box { display: flex; gap: 9px; }
+  .quick-box textarea {
+    flex: 1; border: 1px solid #e2e8e1; border-radius: 10px; padding: 11px 13px;
+    font-family: inherit; font-size: 14px; line-height: 1.6; resize: none;
+    outline: none; min-height: 62px; max-height: 160px; background: #fcfdfc;
+  }
+  .quick-box textarea:focus { border-color: #a8c4a7; background: #fff; }
+  .quick-box button {
+    border: 0; background: #5c8a5d; color: #fff; border-radius: 10px;
+    padding: 0 22px; font-size: 14px; cursor: pointer; font-family: inherit;
+    flex-shrink: 0; align-self: stretch;
+  }
+  .quick-box button:hover { background: #4e7a4f; }
+
+  .mark-row { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+  .mark-btn {
+    border: 1px solid #e2e8e1; background: #fff; color: #8d9a8d; border-radius: 14px;
+    padding: 3px 12px; font-size: 12.5px; cursor: pointer; font-family: inherit;
+  }
+  .mark-btn.on { background: #e4efe3; border-color: #b5cdb4; color: #3f6b40; }
+
+  .note-list { list-style: none; margin-top: 4px; }
+  .note {
+    display: flex; align-items: flex-start; gap: 10px; padding: 11px 0;
+    border-bottom: 1px solid #f2f5f1; font-size: 14px;
+  }
+  .note:last-child { border-bottom: none; }
+  .note .body { flex: 1; min-width: 0; }
+  .note .txt { color: #3a453a; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .note .meta { font-size: 12px; color: #a8b2a8; margin-top: 4px; display: flex; gap: 8px; align-items: center; }
+  .note .tagx {
+    font-size: 11px; background: #f0f5ef; color: #6d8a6d; border-radius: 8px; padding: 1px 8px;
+  }
+  .note .ops { display: flex; gap: 4px; flex-shrink: 0; }
+  .note .ops button {
+    border: 0; background: none; color: #b8c2b8; font-size: 12px; cursor: pointer;
+    padding: 3px 7px; font-family: inherit; border-radius: 5px;
+  }
+  .note .ops button:hover { color: #5c8a5d; background: #f2f6f1; }
+  .note .ops button.danger:hover { color: #c62828; background: #fdf0f0; }
+
+  .search-row { display: flex; gap: 9px; margin-bottom: 12px; }
+  .search-row input {
+    flex: 1; border: 1px solid #e2e8e1; border-radius: 8px; padding: 8px 12px;
+    font-size: 13.5px; font-family: inherit; outline: none;
+  }
+  .search-row input:focus { border-color: #a8c4a7; }
+
+  .empty-tip { font-size: 13px; color: #b0bab0; padding: 18px 0; text-align: center; }
+
+  /* 情绪精力 */
+  .slider-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .slider-row .lab { width: 46px; font-size: 13.5px; color: #6d7a6d; flex-shrink: 0; }
+  .slider-row input[type="range"] { flex: 1; accent-color: #5c8a5d; }
+  .slider-row .val { width: 62px; text-align: right; font-size: 14px; color: #3f6b40; font-weight: 600; flex-shrink: 0; }
+
+  .mood-save {
+    border: 0; background: #5c8a5d; color: #fff; border-radius: 8px;
+    padding: 9px 24px; font-size: 14px; cursor: pointer; font-family: inherit;
+  }
+  .mood-save:hover { background: #4e7a4f; }
+
+  .mood-chart { display: flex; align-items: flex-end; gap: 3px; height: 90px; margin-top: 6px; }
+  .mood-bar { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 1px; }
+  .mood-bar .m { background: #a8c4a7; border-radius: 2px 2px 0 0; min-height: 2px; }
+  .mood-bar .e { background: #d4b483; border-radius: 0 0 2px 2px; min-height: 2px; }
+  .mood-legend { display: flex; gap: 16px; font-size: 12px; color: #9aa89a; margin-top: 8px; }
+  .mood-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; }
+
+  .weekday-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 10px; }
+  .wd-cell { text-align: center; }
+  .wd-cell .n { font-size: 12px; color: #9aa89a; margin-bottom: 5px; }
+  .wd-cell .v { font-size: 15px; font-weight: 600; color: #3f6b40; }
+  .wd-cell .v.low { color: #c08a5a; }
+
+  /* 时间记录 */
+  .time-form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .time-form select, .time-form input {
+    border: 1px solid #e2e8e1; border-radius: 8px; padding: 8px 11px;
+    font-size: 13.5px; font-family: inherit; outline: none; background: #fff;
+  }
+  .time-form input[type="time"] { width: 108px; }
+  .time-form button {
+    border: 0; background: #5c8a5d; color: #fff; border-radius: 8px;
+    padding: 8px 20px; font-size: 13.5px; cursor: pointer; font-family: inherit;
+  }
+  .time-form button:hover { background: #4e7a4f; }
+
+  .cat-bar { display: flex; flex-direction: column; gap: 7px; }
+  .cat-line { display: flex; align-items: center; gap: 10px; font-size: 13.5px; }
+  .cat-line .nm { width: 62px; color: #5d6a5d; flex-shrink: 0; }
+  .cat-line .tr { flex: 1; height: 8px; background: #f0f4ef; border-radius: 4px; overflow: hidden; }
+  .cat-line .fl { height: 100%; border-radius: 4px; }
+  .cat-line .hr { width: 58px; text-align: right; color: #8d9a8d; font-size: 12.5px; flex-shrink: 0; }
+
+  .big-num { text-align: center; padding: 8px 0 4px; }
+  .big-num .v { font-size: 32px; font-weight: 700; color: #3f6b40; line-height: 1.1; }
+  .big-num .v small { font-size: 14px; font-weight: 400; color: #8d9a8d; margin-left: 4px; }
+  .big-num .l { font-size: 12.5px; color: #9aa89a; margin-top: 5px; }
+
+  .add-cat { display: flex; gap: 8px; margin-top: 12px; }
+  .add-cat input {
+    flex: 1; border: 1px solid #e2e8e1; border-radius: 8px; padding: 7px 11px;
+    font-size: 13px; font-family: inherit; outline: none;
+  }
+  .add-cat button {
+    border: 1px solid #e2e8e1; background: #fff; color: #5c8a5d; border-radius: 8px;
+    padding: 7px 16px; font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+
+  .day-list { list-style: none; }
+  .day-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 0;
+    border-bottom: 1px solid #f2f5f1; font-size: 13.5px;
+  }
+  .day-item:last-child { border-bottom: none; }
+  .day-item .tm { color: #8d9a8d; font-size: 12.5px; width: 92px; flex-shrink: 0; }
+  .day-item .cat {
+    font-size: 11.5px; background: #f0f5ef; color: #6d8a6d; border-radius: 8px; padding: 2px 9px;
+    flex-shrink: 0;
+  }
+  .day-item .what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #3a453a; }
+  .day-item .del {
+    border: 0; background: none; color: #c8d0c8; font-size: 12px; cursor: pointer;
+    padding: 2px 6px; font-family: inherit;
+  }
+  .day-item .del:hover { color: #c62828; }
+</style>
+<link rel="stylesheet" href="../../shared/rail.css?v=11">
+<link rel="stylesheet" href="../../shared/settings.css">
+<link rel="stylesheet" href="../../shared/mobile.css?v=11">
+  <link rel="stylesheet" href="../../shared/theme.css">
+  <style>
+    /* 液态玻璃统一主题（2026-10-27）：只换材质，布局、尺寸、配色关系一律不动 */
+    .topbar {
+      background: var(--wb-glass-bg-soft);
+      border-bottom: 1px solid var(--wb-glass-line-soft);
+      backdrop-filter: var(--wb-glass-blur);
+      -webkit-backdrop-filter: var(--wb-glass-blur);
+    }
+    .card {
+      background: var(--wb-glass-bg);
+      border: 1px solid var(--wb-glass-line);
+      backdrop-filter: var(--wb-glass-blur);
+      -webkit-backdrop-filter: var(--wb-glass-blur);
+      box-shadow: var(--wb-glass-shadow);
+    }
+    .mark-btn, .add-cat button {
+      background: var(--wb-glass-bg-soft);
+      border-color: var(--wb-glass-line-soft);
+      backdrop-filter: blur(14px) saturate(150%);
+      -webkit-backdrop-filter: blur(14px) saturate(150%);
+    }
+  </style>
+</head>
+<body data-rail-current="notes" class="has-wrail">
+
+<div class="topbar">
+  <h1>随手记</h1>
+  <div class="tabs">
+    <button class="tab active" data-tab="inbox">灵感</button>
+    <button class="tab" data-tab="mood">情绪精力</button>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- 灵感收件箱 -->
+  <div class="view active" id="viewInbox">
+    <div class="card">
+      <div class="quick-box">
+        <textarea id="inboxInput" rows="2" placeholder="想到什么就写下来，不用管分类，写完回车存下"></textarea>
+        <button id="btnSaveNote">存下</button>
+      </div>
+      <div class="mark-row" id="markRow">
+        <button class="mark-btn on" data-mark="">不标</button>
+        <button class="mark-btn" data-mark="想法">想法</button>
+        <button class="mark-btn" data-mark="待办">待办</button>
+        <button class="mark-btn" data-mark="要查">要查</button>
+        <button class="mark-btn" data-mark="想买">想买</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>收件箱</span>
+        <span id="noteCount"></span>
+      </div>
+      <div class="search-row">
+        <input type="text" id="noteSearch" placeholder="搜一下以前记的东西">
+      </div>
+      <ul class="note-list" id="noteList"></ul>
+    </div>
+  </div>
+
+  <!-- 情绪精力 -->
+  <div class="view" id="viewMood">
+    <div class="card">
+      <div class="card-title"><span>今天怎么样</span></div>
+      <div class="slider-row">
+        <span class="lab">情绪</span>
+        <input type="range" id="moodRange" min="1" max="5" step="1" value="3">
+        <span class="val" id="moodVal">3</span>
+      </div>
+      <div class="slider-row">
+        <span class="lab">精力</span>
+        <input type="range" id="energyRange" min="1" max="5" step="1" value="3">
+        <span class="val" id="energyVal">3</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button class="mood-save" id="btnSaveMood">记下今天</button>
+        <span style="font-size:12.5px;color:#a8b2a8;" id="moodHint"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>最近三十天</span></div>
+      <div class="mood-chart" id="moodChart"></div>
+      <div class="mood-legend">
+        <span><i style="background:#a8c4a7;"></i>情绪</span>
+        <span><i style="background:#d4b483;"></i>精力</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>一周里哪天状态最好</span></div>
+      <div class="weekday-row" id="weekdayRow"></div>
+    </div>
+  </div>
+
+  <!-- 时间记录已经搬到「时间管理」 -->
+  <div class="view" id="viewTime">
+    <div class="card">
+      <div class="card-title"><span>时间记录</span></div>
+      <p class="dim" style="font-size:13px;line-height:1.75;">
+        时间记录已经搬到「时间管理」里了，跟课表放在一起，能对得上课表。
+        <br>之前记的时间和类别都还在，打开时间管理就能看到。
+      </p>
+      <div style="margin-top:12px;">
+        <a class="btn ghost" href="../time/index.html" style="text-decoration:none;display:inline-block;">去时间管理</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="../../shared/store.js?v=18"></script>
+<script src="app.js"></script>
+<script src="../../modules.js"></script>
+<script src="../../shared/side.js"></script>
+<script src="../../shared/settings.js"></script>
+<script src="../../shared/rail.js?v=11"></script>
+<script src="../../shared/sync.js?v=20"></script>
+</body>
+</html>

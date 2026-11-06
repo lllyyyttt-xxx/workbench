@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工作台</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    color: #2b2b2b; min-height: 100vh;
+    /* 左边给图标轨让出位置，展开收起时整个内容区跟着平移缩放，
+     * 所以视觉上一直是居中的
+     */
+    padding: 40px 32px 60px 108px;
+    transition: padding-left .34s cubic-bezier(.4,0,.2,1);
+    /* 卡片流动时两侧会滑出去，别让页面出现横向滚动条 */
+    overflow-x: hidden;
+    /* 液态玻璃需要背后有颜色和光斑才透得出来 */
+    background:
+      radial-gradient(1200px 700px at 12% -5%, rgba(180,200,255,.55), transparent 60%),
+      radial-gradient(1000px 620px at 92% 8%, rgba(255,205,225,.50), transparent 62%),
+      radial-gradient(900px 700px at 50% 105%, rgba(190,235,220,.45), transparent 60%),
+      linear-gradient(160deg, #f4f6fb 0%, #eef1f8 50%, #f6f4f9 100%);
+    background-attachment: fixed;
+  }
+  header.top {
+    margin: 0 0 24px;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+  }
+  .brand h1 { font-size: 24px; font-weight: 700; letter-spacing: .5px; }
+  .brand p { font-size: 13px; color: #8a8a8a; margin-top: 6px; }
+  .top-right { display: flex; align-items: center; gap: 14px; }
+  #clock { font-size: 13px; color: #8a8a8a; }
+  .icon-btn {
+    border: 1px solid rgba(255,255,255,.8); background: rgba(255,255,255,.62);
+    border-radius: 12px; backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    box-shadow: 0 1px 3px rgba(31,38,52,.05), inset 0 1px 0 rgba(255,255,255,.9);
+    padding: 6px 12px; font-size: 13px; color: #555; cursor: pointer;
+  }
+  .icon-btn:hover { border-color: #bbb; color: #222; }
+
+  /* 模块导航：竖排图标轨
+   * 收起时只显示图标（宽 76），展开时显示图标+名字（宽 200）
+   * 展开收起时整个内容区会跟着缩，保证视觉上还是居中的
+   */
+  .rail {
+    position: fixed; left: 0; top: 0; bottom: 0; z-index: 90;
+    width: 76px; display: flex; flex-direction: column;
+    padding: 16px 0 14px;
+    transition: width .34s cubic-bezier(.4,0,.2,1);
+    overflow: hidden;
+  }
+  .rail.open { width: 200px; }
+
+  .rail-toggle {
+    width: 40px; height: 40px; margin: 0 auto 14px; flex-shrink: 0;
+    border: 0; background: transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 12px; color: #8b93a3; font-size: 19px;
+    font-family: inherit; transition: background .15s, color .15s, transform .3s;
+  }
+  .rail-toggle:hover { background: rgba(255,255,255,.55); color: #4a5262; }
+  .rail.open .rail-toggle { transform: rotate(180deg); }
+
+  /* 中间滚动区：概览 + 模块列表，一起滚 */
+  .rail-scroll {
+    flex: 1; overflow-y: auto; overflow-x: hidden;
+    display: flex; flex-direction: column; padding: 2px 0;
+  }
+  .rail-scroll::-webkit-scrollbar { width: 0; }
+
+  .rail-list {
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 2px 10px;
+  }
+
+  /* 概览和模块列表之间一条很淡的分隔 */
+  .rail-sep {
+    height: 1px; margin: 10px 16px; flex-shrink: 0;
+    background: rgba(140,150,168,.16);
+  }
+
+  /* 今日概览块 */
+  .rail-overview { padding: 0 10px; flex-shrink: 0; }
+  .rail-ov-head {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%; height: 48px; padding: 0 9px;
+    border: 0; background: transparent; cursor: pointer;
+    border-radius: 14px; font-family: inherit; text-align: left;
+    color: #5f6675; white-space: nowrap; transition: background .16s;
+  }
+  .rail-ov-head:hover { background: rgba(255,255,255,.45); }
+  .rail-ov-icon { background: rgba(126,87,194,.85); font-size: 12px; }
+  .rail-ov-arrow {
+    margin-left: auto; font-size: 15px; color: #a2aab8;
+    opacity: 0; transition: opacity .2s, transform .25s;
+  }
+  .rail.open .rail-ov-arrow { opacity: 1; }
+  .rail-overview.show .rail-ov-arrow { transform: rotate(90deg); }
+
+  /* 概览正文：收起导航时不显示，展开并点开后才展开 */
+  .rail-ov-body {
+    display: none; padding: 4px 0 10px 8px;
+  }
+  .rail.open .rail-overview.show .rail-ov-body { display: block; }
+
+  .ov-block { margin-bottom: 12px; }
+  .ov-block:last-child { margin-bottom: 0; }
+  .ov-head {
+    font-size: 11px; color: #9aa2b1; font-weight: 500;
+    margin-bottom: 5px; letter-spacing: .3px;
+  }
+  /* 概览正文里那些小元素（金额、空态、待办行）的样式已经统一收进
+   * shared/rail.css，首页不再单独写一份。两边各写一份正是之前首页和模块页
+   * 长得不一样的原因，别再在这里补回来。 */
+
+  /* 单个导航项：收起时是小方块图标，展开时是圆角胶囊 */
+  .rail-item {
+    display: flex; align-items: center; gap: 12px;
+    height: 48px; flex-shrink: 0; padding: 0 9px;
+    border: 0; background: transparent; cursor: pointer;
+    border-radius: 14px; font-family: inherit; text-align: left;
+    color: #5f6675; white-space: nowrap;
+    transition: background .16s, color .16s;
+    width: 100%;
+  }
+  /* 当前项：半透明白色圆底角 */
+  .rail-item.on {
+    background: rgba(255,255,255,.72);
+    color: #2f3542;
+    box-shadow: 0 1px 3px rgba(31,38,52,.06), inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  .rail-item:hover:not(.on) { background: rgba(255,255,255,.42); color: #363c49; }
+
+  .rail-icon {
+    width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; color: #fff;
+    background: var(--rail-color, #8e9aab);
+    transition: transform .16s;
+  }
+  .rail-item:hover .rail-icon { transform: scale(1.06); }
+
+  /* 收起时文字完全藏起来，别跟图标挤在一起 */
+  .rail-text { min-width: 0; opacity: 0; transition: opacity .2s; }
+  .rail.open .rail-text { opacity: 1; }
+  .rail-setting .rail-name { opacity: 0; transition: opacity .2s; }
+  .rail.open .rail-setting .rail-name { opacity: 1; }
+  .rail-name { font-size: 13.5px; font-weight: 500; display: block; line-height: 1.3; }
+  .rail-desc {
+    font-size: 11px; color: #98a0af; display: block; line-height: 1.3;
+    overflow: hidden; text-overflow: ellipsis; max-width: 118px;
+  }
+
+  /* 设置固定在底部 */
+  .rail-setting {
+    margin: 10px 10px 0; flex-shrink: 0;
+    display: flex; align-items: center; gap: 12px;
+    height: 48px; padding: 0 9px;
+    border: 0; background: transparent; cursor: pointer;
+    border-radius: 14px; font-family: inherit; color: #5f6675;
+    white-space: nowrap; transition: background .16s, color .16s;
+  }
+  .rail-setting:hover { background: rgba(255,255,255,.55); color: #363c49; }
+  .rail-setting .rail-icon { background: rgba(140,148,162,.28); color: #5f6675; font-size: 12px; }
+  .rail-setting .rail-name { font-size: 13.5px; font-weight: 500; }
+
+  /* 主体：左边今日概览一列贯通，右边标题、助手和轮播 */
+  .main-wrap {
+    max-width: 1560px; margin: 0 auto;
+    display: flex; gap: 26px; align-items: stretch;
+    transition: max-width .34s cubic-bezier(.4,0,.2,1);
+  }
+  /* 图标轨展开时内容区收窄一点，让整体还保持居中不贴边 */
+  body.rail-open { padding-left: 232px; }
+  body.rail-open .main-wrap { max-width: 1420px; }
+  .main-col { flex: 1; min-width: 0; }
+
+  /* 侧边栏 */
+  .side {
+    width: 296px; flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 11px;
+    padding-top: 0;
+  }
+  .side-titlebar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 4px 2px;
+  }
+  .side-title { font-size: 13px; color: #5a6472; font-weight: 600; }
+  .side-close {
+    display: none; border: 0; background: none; color: #b0b8c2;
+    font-size: 16px; line-height: 1; cursor: pointer; padding: 0 2px;
+    font-family: inherit;
+  }
+  .side-close:hover { color: #4a6fa5; }
+  /* 屏幕窄的时候才有收起按钮 */
+  @media (max-width: 1240px) {
+    .side-close { display: block; }
+  }
+  .side-block {
+    padding: 14px 16px; border-radius: 20px;
+    background: rgba(255,255,255,.5);
+    border: 1px solid rgba(255,255,255,.72);
+    backdrop-filter: blur(26px) saturate(170%);
+    -webkit-backdrop-filter: blur(26px) saturate(170%);
+    box-shadow:
+      0 1px 4px rgba(31,38,52,.04),
+      0 8px 24px rgba(31,38,52,.06),
+      inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  .side-head {
+    font-size: 12px; color: #97a1ad; margin-bottom: 9px; font-weight: 500;
+  }
+  .side-body { font-size: 13.5px; color: #2f3542; line-height: 1.65; }
+  .side-body .big { font-size: 23px; font-weight: 600; color: #2f3542; }
+  .side-body .big small { font-size: 12.5px; font-weight: 400; color: #97a1ad; margin-left: 3px; }
+  .side-body .sub { font-size: 12px; color: #97a1ad; margin-top: 2px; }
+  .side-body .empty { color: #b8c0ca; font-size: 12.5px; }
+  .side-body .warn { color: #e07b39; }
+  .side-body .row {
+    display: flex; align-items: baseline; gap: 7px; padding: 3px 0;
+  }
+  .side-body .row .dotline {
+    width: 5px; height: 5px; border-radius: 50%; background: #d8dee6; flex-shrink: 0;
+    margin-top: 7px;
+  }
+  .side-body .row .txt {
+    flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: 13px;
+  }
+  .side-body .row .num { font-size: 12px; color: #97a1ad; flex-shrink: 0; }
+  /* "最近打开"的样式也收进 shared/rail.css 了 */
+
+/* 卡片轮播：3D 圆环，七张卡片立在圆周上绕圈转 */
+  .deck {
+    position: relative;
+    display: flex; align-items: center;
+    padding: 6px 0;
+  }
+  .deck-stage {
+    flex: 1; position: relative;
+    height: 460px; overflow: hidden;
+    /* 3D 舞台：透视 + 整体微微前倾，能看见环顶 */
+    perspective: 1500px;
+    perspective-origin: 50% 45%;
+  }
+  /* 七张卡片排成一个圆环，整体往前倾斜一点，立体感出来 */
+  .deck-ring {
+    position: absolute; left: 50%; top: 50%;
+    width: 0; height: 0;
+    transform-style: preserve-3d;
+    transform: rotateX(-14deg);
+  }
+  .deck-btn {
+    position: absolute; top: 50%; margin-top: -21px;
+    width: 42px; height: 42px; flex-shrink: 0; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.8); color: #5a6472;
+    background: rgba(255,255,255,.6);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    box-shadow: 0 2px 8px rgba(31,38,52,.08), inset 0 1px 0 rgba(255,255,255,.9);
+    font-size: 22px; line-height: 1; cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+    transition: all .15s; z-index: 60;
+    box-shadow: 0 2px 10px rgba(47,53,66,.1);
+  }
+  .deck-btn.prev { left: 8px; }
+  .deck-btn.next { right: 8px; }
+  .deck-btn:hover { border-color: #b9c4d2; color: #2f3542; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .deck-btn:active { transform: scale(.94); }
+  .deck-dots {
+    margin: 14px auto 0; display: flex; justify-content: center; gap: 7px;
+  }
+  .deck-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: #d8dee6; border: 0;
+    padding: 0; cursor: pointer; transition: all .2s;
+  }
+  .deck-dot.on { background: #7e57c2; width: 22px; border-radius: 4px; }
+
+  /* 卡片本体 */
+  /* 卡片（iOS 26 液态玻璃风格）
+   * 半透明磨砂底 + 背后模糊 + 高光边框 + 内层渐变光泽
+   * backdrop-filter 让卡片后面的内容透出柔光，形成玻璃质感
+   */
+  .card {
+    position: absolute; left: 0; top: 0;
+    width: 250px; height: 340px;
+    margin-left: -125px; margin-top: -170px;
+    padding: 26px 24px 20px; cursor: pointer; overflow: hidden;
+    border-radius: 22px;
+    /* 柔和玻璃底：保证按钮和文字在任何背景上都看得清 */
+    background: rgba(255,255,255,.62);
+    border: 1px solid rgba(255,255,255,.75);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    box-shadow: 0 6px 22px rgba(31,38,52,.08), inset 0 1px 0 rgba(255,255,255,.85);
+    transition: transform .5s cubic-bezier(.22,.61,.36,1), opacity .5s;
+    display: flex; flex-direction: column;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    will-change: transform, opacity;
+  }
+  /* 卡片不再有高光和色条，文字直接落在背景上 */
+  .card.disabled::before { opacity: .3; }
+  /* 当前这张：更亮、更大阴影，像浮在玻璃上 */
+  /* 当前那张：半透明白色圆底，其余卡片都是纯文字 */
+  .card.is-center {
+    background: rgba(255,255,255,.72);
+    box-shadow:
+      0 2px 6px rgba(31,38,52,.05),
+      0 14px 36px rgba(31,38,52,.10),
+      inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  .card.is-center:hover {
+    background: rgba(255,255,255,.84);
+  }
+  /* 侧边和远处的卡片都是纯文字，不要底色
+   * 位置全由行内 3D 变换控制，这里不能再写 transform
+   */
+  .card.is-near-l, .card.is-near-r,
+  .card.is-far-l, .card.is-far-r {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* 真看不见的那些排后面 */
+  .card.is-hidden {
+    opacity: 0; z-index: 1; pointer-events: none;
+  }
+  .card.disabled { cursor: default; }
+  .card.disabled::before { opacity: .3; box-shadow: none; }
+  .card.disabled .card-name, .card.disabled .card-desc { color: #9a9a9a; }
+  .card-top { display: flex; align-items: center; justify-content: space-between; }
+  .card-icon {
+    width: 56px; height: 56px; border-radius: 13px; display: flex; align-items: center;
+    justify-content: center; font-size: 24px; font-weight: 700; color: #fff;
+    background: var(--card-color, #00897b);
+  }
+  .card.disabled .card-icon { background: #cfcfcf; }
+  .card-state { font-size: 12px; color: #8a8f9b; }
+  .card-name { font-size: 23px; font-weight: 600; margin-top: 20px; }
+  .card-desc { font-size: 14.5px; color: #5f6470; margin-top: 9px; line-height: 1.6; flex: 1; }
+  .card-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+  .tag { font-size: 12px; color: #676d7a; }
+  .card-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: auto; padding-top: 15px;
+  }
+  .card-enter { font-size: 14.5px; color: var(--card-color, #00897b); font-weight: 600; }
+  .card.disabled .card-enter { color: #aaa; font-weight: 400; }
+  .card-used { font-size: 12px; color: #8a8f9b; }
+
+  /* AI 对话区：液态玻璃风格 */
+  .ai-bar {
+    margin: 0 0 26px; position: relative; overflow: hidden;
+    border-radius: 28px;
+    background: rgba(255,255,255,.5);
+    border: 1px solid rgba(255,255,255,.72);
+    backdrop-filter: blur(34px) saturate(180%);
+    -webkit-backdrop-filter: blur(34px) saturate(180%);
+    box-shadow:
+      0 2px 8px rgba(31,38,52,.05),
+      0 16px 44px rgba(31,38,52,.09),
+      inset 0 1px 0 rgba(255,255,255,.95),
+      inset 0 -1px 0 rgba(255,255,255,.35);
+    padding: 16px 18px 14px;
+  }
+  /* 顶部高光，玻璃的镜面感 */
+  .ai-bar::after {
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 40%;
+    background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,0));
+    pointer-events: none; border-radius: 28px 28px 0 0;
+  }
+  /* 左侧彩色发光条 */
+  .ai-bar::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: linear-gradient(180deg, #7e57c2, #26a69a);
+    box-shadow: 0 0 16px -2px rgba(126,87,194,.75);
+    z-index: 2;
+  }
+  .ai-head {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    position: relative; z-index: 1;
+  }
+  .ai-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #bdbdbd; flex-shrink: 0;
+    transition: background .2s, box-shadow .2s;
+  }
+  .ai-title { font-size: 13px; color: #5c5768; font-weight: 600; }
+  .ai-state {
+    font-size: 11px; color: #756e85;
+    background: rgba(255,255,255,.66); border: 1px solid rgba(255,255,255,.9);
+    border-radius: 12px; padding: 2px 9px; margin-left: auto;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  /* 输入区：玻璃凹槽 */
+  .ai-input-box {
+    position: relative; z-index: 1;
+    background: rgba(255,255,255,.46);
+    border: 1px solid rgba(255,255,255,.85);
+    border-radius: 20px; padding: 12px 14px 46px;
+    box-shadow: inset 0 1px 3px rgba(31,38,52,.05);
+    transition: background .18s, border-color .18s, box-shadow .18s;
+  }
+  .ai-input-box:focus-within {
+    background: rgba(255,255,255,.72);
+    border-color: rgba(179,157,219,.9);
+    box-shadow: inset 0 1px 3px rgba(31,38,52,.04), 0 0 0 4px rgba(179,157,219,.18);
+  }
+  .ai-input {
+    width: 100%; min-height: 64px; max-height: 200px; resize: none;
+    border: 0; outline: none; background: transparent;
+    font-family: inherit; font-size: 14px; line-height: 1.6; color: #2b2b2b;
+    padding: 0;
+  }
+  .ai-input::placeholder { color: #a8a3b3; }
+  /* 发送按钮：玻璃质感的高光圆钮 */
+  .ai-send {
+    position: absolute; right: 10px; bottom: 10px;
+    width: 34px; height: 34px; border-radius: 50%; border: 0;
+    background: linear-gradient(160deg, #8e6fd0, #6d4bb2);
+    color: #fff; font-size: 16px; line-height: 1;
+    cursor: pointer; font-family: inherit;
+    box-shadow: 0 3px 10px rgba(109,75,178,.35), inset 0 1px 0 rgba(255,255,255,.45);
+    transition: transform .12s, box-shadow .15s, filter .15s;
+  }
+  .ai-send:hover { filter: brightness(1.07); box-shadow: 0 4px 14px rgba(109,75,178,.45), inset 0 1px 0 rgba(255,255,255,.5); }
+  .ai-send:active { transform: scale(.93); }
+  .ai-send:disabled { background: rgba(190,186,200,.6); box-shadow: none; cursor: not-allowed; transform: none; }
+
+  /* 底下一排快捷提问 */
+  .ai-chips { display: flex; gap: 7px; margin-top: 9px; flex-wrap: wrap; position: relative; z-index: 1; }
+  .ai-chip {
+    border: 1px solid rgba(255,255,255,.85);
+    background: rgba(255,255,255,.55); color: #6f6880;
+    border-radius: 16px; padding: 5px 13px; font-size: 12.5px;
+    cursor: pointer; font-family: inherit;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 1px 3px rgba(31,38,52,.04), inset 0 1px 0 rgba(255,255,255,.9);
+    transition: all .15s;
+  }
+  .ai-chip:hover {
+    border-color: rgba(179,157,219,.9); color: #6d4bb2;
+    background: rgba(255,255,255,.8); transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(109,75,178,.14), inset 0 1px 0 rgba(255,255,255,1);
+  }
+
+  .ai-hint { font-size: 12px; color: #9a95a8; margin-top: 9px; line-height: 1.6; position: relative; z-index: 1; }
+  .ai-cfg {
+    border: 1px solid rgba(255,255,255,.85);
+    background: rgba(255,255,255,.6); color: #7b7488; border-radius: 10px;
+    padding: 3px 11px; font-size: 12px; cursor: pointer; font-family: inherit;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+    transition: all .15s;
+  }
+  .ai-cfg:hover { border-color: rgba(179,157,219,.9); color: #6d4bb2; background: rgba(255,255,255,.82); }
+  /* 对话记录：固定高度，聊多了在框里滚动，不把页面撑长 */
+  .ai-log {
+    margin-top: 12px; display: flex; flex-direction: column; gap: 9px;
+    max-height: 260px; overflow-y: auto;
+    padding-right: 4px; overscroll-behavior: contain;
+    position: relative; z-index: 1;
+  }
+  .ai-log:empty { display: none; }
+  .ai-log::-webkit-scrollbar { width: 6px; }
+  .ai-log::-webkit-scrollbar-thumb { background: rgba(160,155,175,.35); border-radius: 3px; }
+  .ai-log::-webkit-scrollbar-thumb:hover { background: rgba(160,155,175,.5); }
+  /* 气泡也是玻璃的 */
+  .ai-msg {
+    font-size: 13.5px; line-height: 1.7; padding: 9px 13px; border-radius: 16px; max-width: 88%;
+    white-space: pre-wrap; word-break: break-word;
+    border: 1px solid rgba(255,255,255,.85);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 2px 8px rgba(31,38,52,.05), inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  .ai-msg.me {
+    background: linear-gradient(160deg, rgba(198,178,240,.72), rgba(174,150,226,.66));
+    color: #3a2f52; align-self: flex-end;
+    border-color: rgba(255,255,255,.7);
+  }
+  .ai-msg.bot {
+    background: rgba(255,255,255,.66); color: #463f52; align-self: flex-start;
+  }
+  .ai-msg.bad {
+    background: rgba(255,232,232,.78); color: #a05050; align-self: flex-start;
+    border-color: rgba(255,255,255,.8);
+  }
+  .ai-msg .lbl { font-size: 11px; color: #9a95a8; display: block; margin-bottom: 3px; }
+  .ai-ctx {
+    margin-top: 12px; border: 1px dashed rgba(210,200,230,.85); border-radius: 14px; overflow: hidden;
+    position: relative; z-index: 1;
+    background: rgba(255,255,255,.34);
+  }
+  .ai-ctx-head {
+    font-size: 12px; color: #8a82a0; padding: 7px 13px;
+    background: rgba(255,255,255,.5);
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .ai-ctx-body {
+    margin: 0; padding: 10px 13px; font-family: Consolas, monospace; font-size: 12px;
+    line-height: 1.7; color: #6b6478; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow: auto;
+  }
+  #aiCfgPanel {
+    position: fixed; top: 0; right: 0; height: 100vh; width: 360px; max-width: 90vw;
+    background: rgba(255,255,255,.82);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border-left: 1px solid rgba(255,255,255,.85);
+    box-shadow: -8px 0 40px rgba(31,38,52,.12), inset 1px 0 0 rgba(255,255,255,.7);
+    transform: translateX(100%); transition: transform .22s ease; z-index: 40;
+    display: flex; flex-direction: column;
+  }
+  #aiCfgPanel.show { transform: translateX(0); }
+  .cfg-input {
+    width: 100%; border: 1px solid #e2e2e2; border-radius: 7px; padding: 8px 11px;
+    font-size: 13px; font-family: inherit; outline: none; resize: vertical;
+  }
+  .cfg-input:focus { border-color: #b39ddb; }
+  .dim { color: #999; font-size: 12px; line-height: 1.6; }
+
+  @keyframes shakeIt {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(2px); }
+  }
+  .card.shake { animation: shakeIt .35s ease; }
+
+  #emptyHint { max-width: 1080px; margin: 40px auto; text-align: center; color: #999; font-size: 14px; display: none; }
+
+  .rename-row input:focus { border-color: #00897b; }
+  .rename-row button {
+    border: 1px solid #ddd; background: #fff; color: #555; border-radius: 6px;
+    padding: 6px 12px; font-size: 12.5px; cursor: pointer; flex-shrink: 0;
+  }
+  .rename-row button:hover { border-color: #00897b; color: #00897b; }
+
+  /* 今天一屏：打开就能看完今天要干什么，不用点进模块 */
+  .today-bar { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 14px; }
+  .today-cell {
+    flex: 1 1 0; min-width: 148px;
+    border-radius: 14px; padding: 10px 14px;
+    background: rgba(255,255,255,.62);
+    border: 1px solid rgba(255,255,255,.8);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    box-shadow: 0 1px 3px rgba(31,38,52,.05), inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  .today-k { font-size: 11.5px; color: #97a1ad; }
+  .today-v {
+    font-size: 15px; font-weight: 600; color: #2f3542; margin-top: 3px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .today-s { font-size: 11.5px; color: #8b95a3; margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .today-v small { font-weight: 400; color: #8b95a3; font-size: 11.5px; margin-left: 4px; }
+
+  /* 确认条：AI 要改数据时先弹这个，同意了才真的写 */
+  .ai-confirm {
+    margin-top: 10px; border-radius: 12px; padding: 10px 12px;
+    background: rgba(255,247,235,.94); border: 1px solid rgba(230,190,120,.6);
+  }
+  .ai-confirm-head { font-size: 12px; font-weight: 600; color: #a8763c; margin-bottom: 6px; }
+  .ai-confirm-body { font-size: 13px; color: #3d4450; line-height: 1.55; }
+  .ai-confirm-acts { display: flex; gap: 8px; margin-top: 9px; }
+  .ai-confirm-acts button {
+    border-radius: 8px; padding: 5px 14px; font-size: 12.5px; cursor: pointer; font-family: inherit;
+  }
+  .ai-confirm-acts .ok { border: 0; background: #4a6fa5; color: #fff; }
+  .ai-confirm-acts .ok:hover { background: #3d5d8c; }
+  .ai-confirm-acts .no { border: 1px solid #ddd; background: #fff; color: #666; }
+  .ai-confirm-acts .no:hover { border-color: #bbb; }
+
+  /* 撤销条：改过东西才出现，点一下退回上一次 */
+  .ai-undo {
+    margin-top: 9px; display: none; align-items: center; gap: 9px;
+    font-size: 11.5px; color: #8b95a3; flex-wrap: wrap;
+  }
+  .ai-undo button {
+    border: 1px solid rgba(255,255,255,.9); background: rgba(255,255,255,.72);
+    border-radius: 8px; padding: 3px 10px; font-size: 11.5px; color: #4a6fa5;
+    cursor: pointer; font-family: inherit;
+  }
+  .ai-undo button:hover { border-color: #4a6fa5; }
+
+  /* 改动回显：每条改了什么单独一行，扫一眼就能核对 */
+  .ai-note { font-size: 12px; color: #2e7d32; margin: -4px 0 8px 24px; line-height: 1.5; }
+  .ai-note.bad { color: #c62828; }
+  .ai-note.dim { color: #97a1ad; }
+</style>
+  <link rel="stylesheet" href="shared/dock.css">
+<link rel="stylesheet" href="shared/remind.css">
+<link rel="stylesheet" href="shared/settings.css">
+<link rel="stylesheet" href="shared/rail.css">
+</head>
+<body class="has-wrail">
+<div class="main-wrap">
+
+<!-- 模块导航：竖排图标轨，可以展开收起 -->
+
+
+
+
+
+
+<div class="main-col">
+
+<header class="top">
+  <div class="brand">
+    <h1>工作台</h1>
+    <p>选一个模块开始</p>
+  </div>
+  <div class="top-right">
+    <span id="clock"></span>
+  </div>
+</header>
+
+<!-- 今天一屏：课、待办、倒计时、番茄，一眼看完 -->
+<section class="today-bar" id="todayBar"></section>
+
+<section class="ai-bar" id="aiBar">
+  <div class="ai-head">
+    <span class="ai-dot" id="aiDot"></span>
+    <span class="ai-title">工作台助手</span>
+    <span class="ai-state" id="aiState">本地预览</span>
+    <button class="ai-cfg" id="aiClearLog">清空对话</button>
+    <button class="ai-cfg" id="aiCfgBtn">设置</button>
+  </div>
+  <div class="ai-input-box">
+    <textarea class="ai-input" id="aiInput" rows="3"
+      placeholder="问点关于你自己数据的，比如「这个月花了多少」「还有几件待办」"></textarea>
+    <button class="ai-send" id="aiSendBtn" title="发送">↑</button>
+  </div>
+  <div class="ai-chips">
+    <button class="ai-chip" data-ask="这个月花了多少">这个月花了多少</button>
+    <button class="ai-chip" data-ask="还有几件待办没做完">还有几件待办</button>
+    <button class="ai-chip" data-ask="今天有课吗">今天有课吗</button>
+    <button class="ai-chip" data-ask="今天时间花在哪了">时间花在哪了</button>
+    <button class="ai-chip" data-ask="最近的倒计时还有几天">最近的倒计时</button>
+    <button class="ai-chip" data-ask="最近的时间花在哪">时间花在哪</button>
+  </div>
+  <p class="ai-hint" id="aiHint"></p>
+  <div class="ai-log" id="aiLog"></div>
+
+  <!-- AI 要改数据时先在这里问一句，点了同意才落地 -->
+  <div class="ai-confirm" id="aiConfirm" style="display:none;">
+    <div class="ai-confirm-head">它想改你的数据，确认一下</div>
+    <div class="ai-confirm-body" id="aiConfirmBody"></div>
+    <div class="ai-confirm-acts">
+      <button class="ok" id="aiConfirmOk">同意</button>
+      <button class="no" id="aiConfirmNo">算了</button>
+    </div>
+  </div>
+
+  <!-- 撤销上一次改动 -->
+  <div class="ai-undo" id="aiUndo">
+    <span id="aiUndoText"></span>
+    <button id="aiUndoBtn">撤销上次改动</button>
+  </div>
+
+
+</section>
+
+<aside id="aiCfgPanel">
+  <div class="set-head">
+    <h2>助手设置</h2>
+    <button class="icon-btn" id="aiCfgClose">关闭</button>
+  </div>
+  <div class="set-body">
+    <div class="set-block">
+      <h3>接口地址</h3>
+      <input class="cfg-input" id="cfgBase" type="text" placeholder="https://api.example.com/v1">
+      <p class="dim" style="margin-top:6px;">填到 /v1 这一层就行，后面会自动接 chat/completions。</p>
+    </div>
+    <div class="set-block">
+      <h3>密钥</h3>
+      <input class="cfg-input" id="cfgKey" type="password" placeholder="sk-...">
+      <p class="dim" style="margin-top:6px;">只存在这台电脑上，不会写进任何文件。</p>
+    </div>
+    <div class="set-block">
+      <h3>模型名</h3>
+      <input class="cfg-input" id="cfgModel" type="text" placeholder="gpt-4o-mini">
+    </div>
+    <div class="set-block">
+      <h3>系统提示（可选）</h3>
+      <textarea class="cfg-input" id="cfgSystem" rows="3" placeholder="比如：你是我的工作台助手，回答简短直接。"></textarea>
+    </div>
+    <div class="set-row">
+      <button id="cfgSave">保存</button>
+      <button id="cfgTest">测试连接</button>
+    </div>
+    <div class="set-row">
+      <button id="cfgClear">清除密钥</button>
+    </div>
+    <p class="dim" id="cfgStatus"></p>
+    <p class="dim" id="cfgNote" style="margin-top:14px;color:#c0775c;">注意：用本地文件直接打开时，浏览器会拦下跨域请求，
+    测连接会失败。做成应用后再填地址就能用。</p>
+  </div>
+</aside>
+
+<main class="deck" id="deck">
+      <button class="deck-btn prev" id="deckPrev" title="上一张">‹</button>
+      <div class="deck-stage">
+        <div class="deck-ring" id="grid"></div>
+      </div>
+      <button class="deck-btn next" id="deckNext" title="下一张">›</button>
+    </main>
+    <div class="deck-dots" id="deckDots"></div>
+  </div>
+</div>
+<p id="emptyHint">还没有添加模块，在模块清单里加一条就会出现。</p>
+
+
+
+<script src="shared/store.js"></script>
+<script src="modules/time/timetable-data.js"></script>
+<script src="shared/undo.js"></script>
+<script src="shared/memory.js"></script>
+<script src="shared/normalize.js"></script>
+<script src="shared/course-rules.js"></script>
+<script src="shared/summary.js"></script>
+<script src="shared/tools.js"></script>
+<script src="shared/side.js"></script>
+<script src="modules.js"></script>
+<script src="shared/rail.js"></script>
+<script src="shared/dock.js"></script>
+<script src="shared/remind.js"></script>
+<script src="shared/settings.js"></script>
+<script src="shared/sync.js"></script>
+<script src="shared/gate.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,675 @@
+/* 手机版布局
+ *
+ * 这个文件只在手机版用，桌面版不引用它。
+ * 原则：不改原来的桌面样式，只在这里覆盖，手机上重新排一遍。
+ * 手机屏幕窄，所以三件事同时成立：导航能推挤、卡片只露一张带边、AI 收成一条。
+ */
+
+/* ================= 基础：横竖屏都要能撑满 ================= */
+html, body {
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: none;
+}
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ================= 左侧导航：收起 60、展开 156 =================
+ * 展开时把内容往右挤（padding-left 撑开），不是盖住。
+ * 原来的窄屏规则是「强制收起、不准展开」，这里改成允许展开。
+ */
+body.has-wrail {
+  padding-left: 60px !important;
+  transition: padding-left .3s cubic-bezier(.4, 0, .2, 1);
+}
+body.has-wrail.wrail-open {
+  padding-left: 156px !important;
+}
+.wrail {
+  width: 60px !important;
+  padding: 10px 0 10px !important;
+}
+.wrail.open {
+  width: 156px !important;
+}
+.wrail-toggle {
+  width: 36px !important;
+  height: 36px !important;
+  margin-bottom: 8px !important;
+}
+.wrail-item, .wrail-home, .wrail-ov-head {
+  height: 44px !important;
+  padding: 0 6px !important;
+  border-radius: 12px !important;
+}
+.wrail-icon {
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+}
+.wrail-name {
+  font-size: 13px !important;
+}
+/* 收起时文字本来就要藏起来，展开才显示 */
+.wrail.open .wrail-text,
+.wrail.open .wrail-home .wrail-name,
+.wrail.open .wrail-setting .wrail-name {
+  opacity: 1 !important;
+}
+/* 概览那一段在手机上只留待办和花销，其余由脚本控制显示 */
+.wrail-ov-body {
+  font-size: 12px !important;
+}
+.wrail-setting {
+  height: 44px !important;
+  margin: 8px 6px 0 !important;
+  padding: 0 6px !important;
+  border-radius: 12px !important;
+}
+.wrail-setting .wrail-name {
+  font-size: 13px !important;
+}
+
+/* ================= 主体：顶栏压扁 ================= */
+.main-wrap {
+  max-width: none !important;
+  display: block !important;
+  padding: 0 !important;
+}
+.main-col {
+  padding: 0 14px 14px !important;
+}
+header.top {
+  padding: 10px 2px 8px !important;
+  margin: 0 !important;
+}
+header.top h1, .brand h1 {
+  font-size: 19px !important;
+}
+.brand .sub, .brand p {
+  font-size: 11.5px !important;
+}
+
+/* ================= AI：一条输入框，对话记录在下面 =================
+ * 不在 AI 框里展开看对话了。输入框就一条，回答直接显示在卡片下方，
+ * 跟聊天软件一样往上长。
+ */
+.ai-bar {
+  margin: 0 0 10px !important;
+  padding: 8px 10px !important;
+  border-radius: 16px !important;
+}
+.ai-head {
+  display: none !important;
+}
+.ai-bar .ai-chips,
+.ai-bar .ai-hint {
+  display: none !important;
+}
+.ai-input-box {
+  /* 底部要留出位置给右下角那个发送按钮。
+   * 之前这里把内边距压到 3 像素，按钮是绝对定位，就浮到输入的文字上面去了。 */
+  padding: 6px 14px 44px !important;
+  border-radius: 14px !important;
+}
+.ai-input {
+  /* 字号跟着全局提到 16，行高变大，这里要把高度一起放宽，
+   * 否则提示文字的第二行会被切掉一半。 */
+  font-size: 16px !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  max-height: 130px !important;
+  padding: 4px 0 !important;
+  line-height: 24px !important;
+}
+.ai-send {
+  width: 30px !important;
+  height: 30px !important;
+  font-size: 14px !important;
+}
+/* 输入框下面那一行：状态 + 设置 */
+.ai-quick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 0 2px;
+}
+.ai-state-inline {
+  font-size: 11.5px;
+  opacity: .75;
+}
+.ai-quick .ai-expand {
+  width: auto;
+  margin-top: 0;
+  padding: 4px 12px;
+  font-size: 12px;
+  border-radius: 8px;
+  background: rgba(126, 87, 194, .10);
+  color: #6d4bb2;
+}
+.ai-bar.ai-open .ai-quick { display: none; }
+
+/* 对话记录：卡片下面，自己滚 */
+.ai-chat {
+  margin-top: 10px;
+}
+.ai-chat .ai-log {
+  max-height: 34vh !important;
+  overflow-y: auto;
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+.ai-chat .ai-log:empty {
+  display: none !important;
+}
+.ai-chat .ai-ctx {
+  max-height: 22vh;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+
+/* ================= 卡片区：一张居中，左右露边 ================= */
+/* AI 框和卡片之间留点气口 */
+.deck {
+  padding: 10px 0 0 !important;
+  display: block !important;
+  position: relative;
+}
+.deck-stage {
+  height: clamp(260px, calc(100dvh - 470px), 330px) !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  perspective: none !important;
+  overflow: visible !important;
+  display: block !important;
+}
+.deck-ring {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: none !important;
+  transform-style: flat !important;
+}
+/* 首页卡片专属。以前这里写的是裸的 .card，
+ * 结果连模块页里的 .card 一起改了：单词卡的固定高度被顶掉，
+ * 卡片和下面的按钮叠在一起；其他模块页的卡片也被撑高、垫了内边距。
+ * 首页的卡片都在 .deck-stage 里，加上这个范围就不会再误伤别处。
+ */
+.deck-stage .card {
+  top: 0 !important;
+  height: 100% !important;
+  margin-top: 0 !important;
+  margin-left: 0 !important;
+  padding: 20px 18px 16px !important;
+  border-radius: 20px !important;
+  transform-style: flat !important;
+  will-change: auto !important;
+  background: rgba(255, 255, 255, .62) !important;
+  border: 1px solid rgba(255, 255, 255, .75) !important;
+  box-shadow: 0 6px 22px rgba(90, 100, 125, .10) !important;
+  backface-visibility: visible !important;
+}
+/* 手机上没有悬停，去掉那些靠 hover 的效果 */
+.deck-stage .card:hover {
+  transform: none !important;
+}
+.card-name {
+  font-size: 20px !important;
+  margin-top: 14px !important;
+}
+.card-desc {
+  font-size: 13.5px !important;
+  margin-top: 7px !important;
+  line-height: 1.55 !important;
+  flex: 0 0 auto !important;
+}
+.card-tags {
+  margin-top: 10px !important;
+}
+.card-foot {
+  margin-top: auto !important;
+}
+.card-icon {
+  width: 42px !important;
+  height: 42px !important;
+  font-size: 17px !important;
+  border-radius: 13px !important;
+}
+/* 这一条也要限定：模块页的 .card-enter 是动画类，不是字体 */
+.deck-stage .card-enter {
+  font-size: 13.5px !important;
+}
+.card-state, .card-used {
+  font-size: 11.5px !important;
+}
+
+/* 左右箭头：浮在卡片两侧，别压住卡片文字 */
+.deck-btn {
+  width: 38px !important;
+  height: 38px !important;
+  margin-top: -19px !important;
+  font-size: 17px !important;
+  z-index: 200;
+  background: rgba(255, 255, 255, .88) !important;
+  border: 1px solid rgba(255, 255, 255, .9) !important;
+  box-shadow: 0 2px 10px rgba(90, 100, 125, .14) !important;
+}
+.deck-btn.prev { left: 2px !important; }
+.deck-btn.next { right: 2px !important; }
+
+/* 圆点放底部 */
+.deck-dots {
+  position: static !important;
+  justify-content: center;
+  margin-top: 10px !important;
+}
+.deck-dot {
+  width: 7px !important;
+  height: 7px !important;
+}
+.deck-dot.on {
+  width: 18px !important;
+}
+
+/* ================= 设置面板：手机上铺满 ================= */
+/* 设置和 AI 配置：手机上铺满整屏，背景要实心，层级要压过左侧导航
+ * 原来这两个是电脑上从右边滑出来的窄抽屉，层级比导航低，靠半透明玻璃撑效果。
+ * 手机上铺满之后如果不改，会被导航和卡片透出来，看着就是乱的。
+ */
+#settingsPanel, #aiCfgPanel {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  border-left: 0 !important;
+  background: #fafbfd !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  z-index: 1200 !important;
+}
+.set-body {
+  padding: 12px 14px 20px !important;
+}
+.cfg-input {
+  font-size: 14px !important;
+}
+/* 设置里那些桌面才用的按钮已经删了，剩下的排一行放下 */
+.set-row {
+  flex-wrap: wrap;
+  gap: 8px !important;
+}
+.set-row button {
+  flex: 1 1 auto;
+  min-width: 96px;
+  padding: 9px 12px !important;
+  font-size: 13px !important;
+}
+
+/* ================= 模块页通用 ================= */
+@media (max-width: 900px) {
+  body:not(.has-wrail) {
+    padding-left: 0 !important;
+  }
+}
+
+/* AI 展开和收起：收起时只剩输入框，展开后是一整屏 */
+.ai-expand {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 7px 0;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(126, 87, 194, .10);
+  color: #6d4bb2;
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.ai-bar.ai-open .ai-expand { display: none; }
+.ai-bar.ai-open .ai-hint { display: none; }
+#aiCollapse { flex-shrink: 0; }
+
+/* ================= 课表：手机上左右滑 =================
+ * 七天塞进手机宽度每天只剩三十几像素，字全糊。
+ * 所以让它保持一个够用的最小宽度，靠手指左右滑。
+ */
+.tt {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch;
+}
+.tt-head, .tt-body {
+  min-width: 620px;
+}
+/* 滑动条细一点，别占地方 */
+.tt::-webkit-scrollbar { height: 6px; }
+.tt::-webkit-scrollbar-thumb { background: rgba(140,150,170,.35); border-radius: 3px; }
+
+/* ================= 英语：一屏一段，别横向挤 ================= */
+/* 阅读区按行高滚，宽度撑满一屏，不做分栏 */
+.eng-read, .read-pane, .article-box {
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+/* ================= 通用：长表格和宽内容一律可横滑 ================= */
+.card, .panel, .view {
+  max-width: 100%;
+}
+table {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 手机上这句说明太长，收起来，输入框里的提示已经够用 */
+.ai-hint {
+  display: none !important;
+}
+
+/* ================= 模块页顶栏：按钮要能换行 =================
+ * 模块页的标题加一排按钮，手机宽度放不下，会挤出屏幕右边。
+ * 只对模块页生效，首页的顶栏不动。
+ */
+body[data-rail-current] header,
+body[data-rail-current] .topbar {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 10px 0 8px !important;
+}
+body[data-rail-current] header h1,
+body[data-rail-current] .topbar h1 {
+  font-size: 19px !important;
+  margin: 0 !important;
+  flex-shrink: 0;
+}
+body[data-rail-current] .mode-tabs,
+body[data-rail-current] .tabs {
+  margin-left: 0 !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+}
+body[data-rail-current] .mode-tabs .mode-btn,
+body[data-rail-current] .tabs .tab {
+  padding: 5px 10px !important;
+  font-size: 12.5px !important;
+}
+body[data-rail-current] .back-home {
+  margin-right: 0 !important;
+}
+
+/* ================= AI 全屏时去掉两边的装饰条 ================= */
+.ai-bar.ai-open::before,
+.ai-bar.ai-open::after {
+  display: none !important;
+}
+
+/* ================= 导航展开时卡片收窄，内容跟着收一点 ================= */
+body.wrail-open .card-desc {
+  font-size: 12.5px !important;
+}
+body.wrail-open .card-name {
+  font-size: 18px !important;
+}
+body.wrail-open .card-tags {
+  display: none !important;
+}
+
+/* ================= 随机挑战：四个档位改成两行两列 =================
+ * 四个横排一行的话，每个只剩八十来像素，名字全折行。
+ */
+body[data-rail-current="challenge"] .tiers {
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 10px !important;
+  max-width: none !important;
+}
+body[data-rail-current="challenge"] .stats {
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 10px !important;
+}
+
+/* 收起状态下两个按钮并排：展开对话、AI 设置 */
+.ai-quick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.ai-quick { justify-content: space-between; }
+.ai-quick .ai-state-inline { flex: 0 0 auto; }
+.ai-quick .ai-expand {
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding: 6px 14px;
+}
+.ai-bar.ai-open .ai-quick { display: none; }
+
+
+/* ================= 宽度口径统一 =================
+ * 之前 AI 框、卡片区、导航各用各的内外边距，加起来宽窄不一，
+ * 导航一展开就看出没对齐。这里统一成：内容列撑满，里面的块不再自己加边距。
+ */
+.main-col > header.top,
+.main-col > .ai-bar,
+.main-col > .deck,
+.main-col > .deck-dots,
+.main-col > .ai-chat {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+.deck {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+/* 卡片舞台两侧留出卡片的露出边，靠卡片自己的位移控制，不要再加内边距 */
+.deck-stage {
+  margin: 0 !important;
+}
+
+/* ================= 模块页：内容靠中间 ================= */
+body[data-rail-current] .topbar,
+body[data-rail-current] header {
+  max-width: 760px;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+body[data-rail-current] .wrap,
+body[data-rail-current] .container,
+body[data-rail-current] main,
+body[data-rail-current] .content {
+  max-width: 760px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+
+/* ================= 对话区：空的时候不占地方 ================= */
+.ai-chat {
+  min-height: 0;
+}
+.ai-chat .ai-log:empty {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+/* 有内容才撑开，最多占屏幕三分之一，再多自己滚 */
+.ai-chat .ai-log:not(:empty) {
+  display: block !important;
+}
+
+/* ================= 模块页顶栏真正居中 ================= */
+/* 右边导航占 60，要让内容在剩下的区域里居中，右边多留 60 */
+body[data-rail-current] .topbar,
+body[data-rail-current] header {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+/* 手机上不追求视觉居中，追求不歪：两边留一样的呼吸位 */
+body[data-rail-current] .topbar h1,
+body[data-rail-current] header h1 {
+  margin-left: 0 !important;
+}
+
+
+/* ================= 底部一条：左边圆点，右边换卡箭头 ================= */
+.deck-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 2px 0;
+  margin-top: 6px;
+}
+.deck-bottom .deck-dots {
+  position: static !important;
+  margin: 0 !important;
+  justify-content: flex-start !important;
+  flex: 1 1 auto;
+}
+.deck-arrows {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.deck-arrow {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(150, 160, 180, .28);
+  background: rgba(255, 255, 255, .92);
+  color: #5a6472;
+  font-size: 18px;
+  line-height: 1;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 6px rgba(90, 100, 125, .10);
+  -webkit-tap-highlight-color: transparent;
+}
+.deck-arrow:active {
+  background: rgba(240, 242, 248, .95);
+  transform: scale(.94);
+}
+
+
+/* ================= 模块页：不要大片空白，也不要横向滑 =================
+ * 手机上内容比屏幕矮的时候，下面会留出一大块空底，看着像背景太大。
+ * 这里让页面背景跟着视口走，内容区不再强制拉高。
+ */
+body[data-rail-current] {
+  background-attachment: fixed;
+  background-size: cover;
+  overflow-x: hidden;
+}
+body[data-rail-current] main,
+body[data-rail-current] .wrap,
+body[data-rail-current] .container,
+body[data-rail-current] .content {
+  min-height: 0 !important;
+  padding-bottom: 18px !important;
+}
+/* 页面上所有容器一律不许横向溢出，只有课表例外（它是要滑的） */
+body[data-rail-current] * {
+  max-width: 100%;
+}
+body[data-rail-current] .tt,
+body[data-rail-current] .tt-head,
+body[data-rail-current] .tt-body,
+body[data-rail-current] .tt-col,
+body[data-rail-current] .cls {
+  max-width: none;
+}
+/* 页面本身彻底禁止左右滑，手指左右划不应该带动页面 */
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+}
+
+/* ================= 背景：手机上不用整屏大渐变 =================
+ * 原来那层渐变是给电脑宽屏设计的，手机上一拉，颜色全糊成一片，显得又大又空。
+ * 换成浅浅的纯底色，卡片和文字自己撑起层次。
+ */
+body[data-rail-current] {
+  background-image: none !important;
+  background-color: #f6f7fa !important;
+}
+
+
+/* ================= 课表周条：窄屏不把按钮挤成竖排 =================
+ * 原先中间那块周信息是 flex:1，屏幕一窄就把两侧按钮压到只剩四十来像素，
+ * 「上一周」被挤成上下两个字，「编辑课表」竖成一列。
+ * 窄屏时让周信息独占第一行，按钮平分第二行；实在放不下就自动换行，
+ * 但每个按钮本身不会窄过自己的文字。
+ */
+@media (max-width: 460px) {
+  body[data-rail-current] .week-bar {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  body[data-rail-current] .week-bar .now {
+    flex: 1 1 100% !important;
+    order: -1;
+  }
+  body[data-rail-current] .week-bar button {
+    flex: 1 1 auto !important;
+    min-width: 76px;
+    min-width: max-content;
+    white-space: nowrap !important;
+    padding: 8px 12px !important;
+    font-size: 12.5px !important;
+  }
+}
+
+/* ================= 手机上的点击和输入 =================
+ * 两块体验问题，都是手机上才明显：
+ *   一是输入框字号小于 16 时，iOS 一点进去就自动放大页面，之后还得手动缩回来；
+ *   二是按钮和标签偏矮，手指点起来容易按错。
+ * 这里统一抬高，具体布局各页自己那份样式不用动。
+ */
+body.has-wrail input:not([type="checkbox"]):not([type="radio"]):not([type="date"]):not([type="time"]):not([type="color"]):not([type="range"]),
+body.has-wrail select,
+body.has-wrail textarea {
+  font-size: 16px !important;
+}
+
+/* 高度只抬到够点，别把版面撑变形 */
+body.has-wrail .tabs .tab,
+body.has-wrail .mode-tabs .mode-btn {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 零星的小按钮：分类标记、卡片左右箭头、设置入口 */
+body.has-wrail .mark-row button,
+body.has-wrail .deck-arrow,
+body.has-wrail .ai-quick button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 首页卡片左右切换的圆钮，顺手放大一点 */
+body.has-wrail .deck-arrow {
+  width: 40px !important;
+  height: 40px !important;
+  font-size: 18px !important;
+}

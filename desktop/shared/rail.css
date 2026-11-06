@@ -1,0 +1,263 @@
+/* 全局左侧导航栏样式
+ *
+ * 所有页面（首页 + 各模块）共用这一份。
+ * 类名统一用 wrail- 前缀，避免和页面自己的样式撞车。
+ */
+
+/* 页面要给它让出位置
+ * 模块页的 body 本身没 padding，用 margin 更稳妥，不会影响
+ * .topbar 这种 sticky 元素的宽度计算
+ */
+body.has-wrail {
+  padding-left: 108px !important;
+  transition: padding-left .34s cubic-bezier(.4,0,.2,1);
+}
+body.has-wrail.wrail-open {
+  padding-left: 232px !important;
+}
+
+/* 模块页：body 直接撑满，用 padding-left 让出导航宽度 */
+body.has-wrail > .topbar,
+body.has-wrail > .page {
+  max-width: none;
+}
+
+/* 模块页内容区在剩余宽度里居中，别按整窗居中（那样会偏右） */
+body.has-wrail > .page {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.wrail {
+  position: fixed; left: 0; top: 0; bottom: 0; z-index: 900;
+  width: 76px; display: flex; flex-direction: column;
+  padding: 16px 0 14px;
+  transition: width .34s cubic-bezier(.4,0,.2,1);
+  overflow: hidden;
+  font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+.wrail.open { width: 200px; }
+
+.wrail button { font-family: inherit; }
+
+.wrail-toggle {
+  width: 40px; height: 40px; margin: 0 auto 12px; flex-shrink: 0;
+  border: 0; background: transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 12px; color: #8b93a3; font-size: 19px;
+  transition: background .15s, color .15s;
+}
+.wrail-toggle:hover { background: rgba(255,255,255,.55); color: #4a5262; }
+
+/* 滚动容器
+ * min-height: 0 必须写：flex 子项默认 min-height: auto，内容一多它会
+ * 把父容器撑破（外层 .wrail 是 overflow: hidden，多出来的直接被裁掉，
+ * 用户看着像"滚不动"）。写了这行才是"在框里滚"。
+ *
+ * 上下两条渐隐用的是 mask 而不是盖一层渐变底色——导航背后是页面的
+ * 彩色光斑，盖不透明的白条会露馅，mask 是让内容自己淡出去，透什么底色都行。
+ */
+.wrail-scroll {
+  flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; padding: 2px 0;
+  --mt: 0px; --mb: 0px;
+  -webkit-mask-image: linear-gradient(to bottom,
+    rgba(0,0,0,0) 0, #000 var(--mt), #000 calc(100% - var(--mb)), rgba(0,0,0,0) 100%);
+  mask-image: linear-gradient(to bottom,
+    rgba(0,0,0,0) 0, #000 var(--mt), #000 calc(100% - var(--mb)), rgba(0,0,0,0) 100%);
+}
+
+/* 细滚动条：一直占 4px 宽、平时透明，鼠标进导航才显出来。
+ * 宽度不能变来变去，否则一悬停条目就跳一下。 */
+.wrail-scroll::-webkit-scrollbar { width: 4px; }
+.wrail-scroll::-webkit-scrollbar-track { background: transparent; }
+.wrail-scroll::-webkit-scrollbar-thumb {
+  background: transparent; border-radius: 4px;
+  transition: background .2s;
+}
+.wrail:hover .wrail-scroll::-webkit-scrollbar-thumb { background: rgba(140,150,168,.34); }
+
+.wrail-list { display: flex; flex-direction: column; gap: 4px; padding: 2px 10px; }
+
+.wrail-sep {
+  height: 1px; margin: 10px 16px; flex-shrink: 0;
+  background: rgba(140,150,168,.16);
+}
+.wrail-sep-top { margin: 6px 16px 10px; }
+
+/* 通用条目 */
+.wrail-item, .wrail-home, .wrail-ov-head {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; height: 48px; flex-shrink: 0; padding: 0 9px;
+  border: 0; background: transparent; cursor: pointer;
+  border-radius: 14px; font-family: inherit; text-align: left;
+  color: #5f6675; white-space: nowrap; text-decoration: none;
+  transition: background .16s, color .16s;
+  box-sizing: border-box;
+}
+.wrail-item:hover:not(.on), .wrail-home:hover, .wrail-ov-head:hover {
+  background: rgba(255,255,255,.45); color: #363c49;
+}
+/* 当前页：半透明白色圆底角 */
+.wrail-item.on {
+  background: rgba(255,255,255,.72);
+  color: #2f3542;
+  box-shadow: 0 1px 3px rgba(31,38,52,.06), inset 0 1px 0 rgba(255,255,255,.9);
+}
+.wrail-item.disabled { opacity: .45; cursor: default; }
+
+.wrail-icon {
+  width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600; color: #fff;
+  background: var(--rail-color, #8e9aab);
+  transition: transform .16s;
+}
+.wrail-item:hover .wrail-icon { transform: scale(1.06); }
+.wrail-home-icon { background: rgba(120,132,150,.75); font-size: 15px; }
+.wrail-ov-icon { background: rgba(126,87,194,.85); font-size: 12px; }
+
+/* flex: 1 是关键。之前只写了 min-width: 0，宽度算出来是 0，
+ * 文字全靠溢出显示，一被父级 overflow: hidden 裁掉就变成"Java"这种半截，
+ * 连省略号都没有。给它一个真正的宽度，再用 ellipsis 收尾才正常。 */
+.wrail-text { flex: 1 1 auto; min-width: 0; opacity: 0; transition: opacity .2s; }
+.wrail.open .wrail-text { opacity: 1; }
+.wrail-name {
+  font-size: 13.5px; font-weight: 500; display: block; line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wrail-desc {
+  font-size: 11px; color: #98a0af; display: block; line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis; max-width: 118px;
+}
+.wrail-home .wrail-name,
+.wrail-setting .wrail-name { opacity: 0; transition: opacity .2s; }
+.wrail.open .wrail-home .wrail-name,
+.wrail.open .wrail-setting .wrail-name { opacity: 1; }
+
+/* 今日概览 */
+.wrail-overview { padding: 0 10px; flex-shrink: 0; }
+.wrail-ov-arrow {
+  margin-left: auto; font-size: 15px; color: #a2aab8;
+  opacity: 0; transition: opacity .2s, transform .25s;
+}
+.wrail.open .wrail-ov-arrow { opacity: 1; }
+.wrail-overview.show .wrail-ov-arrow { transform: rotate(90deg); }
+
+.wrail-ov-body { display: none; padding: 4px 0 10px 8px; }
+.wrail.open .wrail-overview.show .wrail-ov-body { display: block; }
+
+/* 概览体限高：不加这个，概览一展开就把下面的模块入口全顶出去，
+ * 窗口矮的时候甚至只剩三个。给它一个上限，超了在自己框里滚，
+ * 模块列表永远留得住位置。 */
+.wrail-ov-body { max-height: 38vh; overflow-y: auto; overflow-x: hidden; }
+.wrail-ov-body::-webkit-scrollbar { width: 3px; }
+.wrail-ov-body::-webkit-scrollbar-track { background: transparent; }
+.wrail-ov-body::-webkit-scrollbar-thumb { background: rgba(140,150,168,.3); border-radius: 3px; }
+
+.ov-block { margin-bottom: 12px; }
+.ov-block:last-child { margin-bottom: 0; }
+.ov-head {
+  font-size: 11px; color: #9aa2b1; font-weight: 500;
+  margin-bottom: 5px; letter-spacing: .3px;
+}
+.ov-body { font-size: 12.5px; color: #4a5261; line-height: 1.6; }
+/* 下面这些子元素类名必须带 ov- 前缀。
+ * 原因：概览要插进全站共享的导航，而各模块页自己也有 .empty / .txt / .num 这类
+ * 裸类名，撞上就会把布局带跑（英语页面的 .empty 带 60px 上下内边距，
+ * 曾把整个概览从 344 像素撑到 1073 像素）。别改回裸类名。
+ */
+.ov-body .ov-big { font-size: 17px; font-weight: 600; color: #2f3542; }
+.ov-body .ov-big small { font-size: 11px; font-weight: 400; color: #99a1b0; }
+.ov-body .ov-empty { color: #b0b7c3; font-size: 12px; }
+/* 不用 space-between：没有日期的待办只有「点 + 文字」两个子元素，
+ * space-between 会把文字顶到最右边，看起来像右对齐、和上一行对不齐。
+ * 改成文字撑满、日期用 margin-left:auto 靠右。 */
+.ov-body .ov-row {
+  display: flex; align-items: center; gap: 7px;
+}
+.ov-body .ov-row .ov-txt {
+  flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ov-body .ov-row .ov-num { margin-left: auto; color: #8b93a2; font-size: 11.5px; flex-shrink: 0; }
+.ov-body .ov-sub { color: #98a0af; font-size: 11px; padding-left: 12px; }
+.ov-body .ov-dotline {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #c3cad6; flex-shrink: 0;
+}
+.ov-body .ov-warn { color: #e07b39; }
+/* 最近打开：原来只在首页定义了样式，模块页上是裸文字，挪到这里全站统一 */
+.ov-body .ov-recent {
+  display: flex; align-items: center; gap: 7px; padding: 4px 0;
+  cursor: pointer; color: #5a6472; font-size: 12.5px; border-radius: 5px;
+}
+.ov-body .ov-recent:hover { color: #6d4bb2; }
+.ov-body .ov-ico {
+  width: 17px; height: 17px; border-radius: 5px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; color: #fff; font-weight: 600;
+}
+
+/* 设置固定底部 */
+.wrail-setting {
+  display: flex; align-items: center; gap: 12px;
+  height: 48px; flex-shrink: 0;
+  margin: 10px 10px 0; padding: 0 9px;
+  border: 0; background: transparent; cursor: pointer;
+  border-radius: 14px; color: #5f6675;
+  white-space: nowrap; transition: background .16s, color .16s;
+  box-sizing: border-box;
+}
+.wrail-setting:hover { background: rgba(255,255,255,.55); color: #363c49; }
+.wrail-setting .wrail-icon {
+  background: rgba(140,148,162,.28); color: #5f6675; font-size: 14px;
+}
+.wrail-setting .wrail-name { font-size: 13.5px; font-weight: 500; }
+
+/* 窄屏时默认收起，避免占掉太多地方 */
+@media (max-width: 1100px) {
+  body.has-wrail { padding-left: 84px !important; }
+  body.has-wrail.wrail-open { padding-left: 84px !important; }
+  .wrail { width: 60px; }
+  .wrail.open { width: 60px; }
+  .wrail.open .wrail-text,
+  .wrail.open .wrail-home .wrail-name,
+  .wrail.open .wrail-setting .wrail-name { opacity: 0; }
+  .wrail.open .wrail-overview.show .wrail-ov-body { display: none; }
+}
+
+/* ---------- 窗口变矮：分两档收紧 ----------
+ * 目标是"尽量别逼人滚"：先收间距，再收图标，最后才让内容滚。
+ * 用 max-height 而不是 JS 算，是因为纯样式切换没有中间态，不会闪。
+ */
+
+/* 第一档：720 以下，条目 48→40，副标题不要了 */
+@media (max-height: 720px) {
+  .wrail { padding: 12px 0 10px; }
+  .wrail-toggle { width: 36px; height: 36px; margin-bottom: 8px; font-size: 17px; }
+  .wrail-item, .wrail-home, .wrail-ov-head { height: 40px; gap: 10px; }
+  .wrail-icon { width: 26px; height: 26px; font-size: 12px; border-radius: 8px; }
+  .wrail-home-icon { font-size: 13px; }
+  .wrail-list { gap: 2px; }
+  .wrail-sep { margin: 8px 16px; }
+  .wrail-sep-top { margin: 4px 16px 8px; }
+  .wrail-setting { height: 40px; margin-top: 8px; }
+  .wrail-desc { display: none; }
+}
+
+/* 第二档：560 以下，条目 34、图标 22，今日概览整块收起
+ * 概览在收起态本来就只有一行看不见的字，占的 40 像素这时候比它值钱得多；
+ * 想要概览把窗口拉高就回来了。
+ */
+@media (max-height: 560px) {
+  .wrail { padding: 8px 0 8px; }
+  .wrail-toggle { width: 30px; height: 30px; margin-bottom: 6px; font-size: 15px; border-radius: 10px; }
+  .wrail-item, .wrail-home, .wrail-ov-head { height: 34px; gap: 9px; padding: 0 8px; border-radius: 10px; }
+  .wrail-icon { width: 22px; height: 22px; font-size: 11px; border-radius: 7px; }
+  .wrail-home-icon { font-size: 12px; }
+  .wrail-name { font-size: 12.5px; }
+  .wrail-overview { display: none; }
+  .wrail-sep { display: none; }
+  .wrail-setting { height: 34px; margin-top: 6px; padding: 0 8px; }
+}

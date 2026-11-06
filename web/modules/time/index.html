@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>时间管理</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #f6f7f9; color: #3a3a3a; min-height: 100vh;
+  }
+  .topbar {
+    background: #fff; border-bottom: 1px solid #e8ecf1; padding: 0 24px;
+    display: flex; align-items: center; gap: 18px; height: 56px; position: sticky; top: 0; z-index: 20;
+  }
+  .back-home {
+    font-size: 13px; color: #5a6a85; text-decoration: none; padding: 5px 11px;
+    border: 1px solid #dee5ee; border-radius: 6px; flex-shrink: 0;
+  }
+  .back-home:hover { background: #f0f4fa; }
+  .topbar h1 { font-size: 17px; font-weight: 600; color: #2f3542; }
+  .tabs { display: flex; gap: 4px; margin-left: 12px; }
+  .tab {
+    padding: 7px 16px; border-radius: 7px; font-size: 14px; cursor: pointer;
+    color: #75808f; border: none; background: none; font-family: inherit;
+  }
+  .tab:hover { background: #f2f5fa; }
+  .tab.active { background: #e6ecf6; color: #3d5a8f; font-weight: 600; }
+
+  .page { max-width: 960px; margin: 0 auto; padding: 22px 24px 70px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .card { background: #fff; border: 1px solid #e8ecf1; border-radius: 13px; padding: 18px 20px; }
+  .card + .card { margin-top: 15px; }
+  .card-title {
+    font-size: 13px; color: #8b95a3; font-weight: 500; margin-bottom: 13px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+
+  /* 下一节课 */
+  .next-class {
+    background: linear-gradient(135deg, #fbfdff, #f1f6fd);
+    border: 1px solid #dbe6f3; border-radius: 13px; padding: 16px 20px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .next-class .lbl { font-size: 12px; color: #8b9aae; flex-shrink: 0; }
+  .next-class .ncls { flex: 1; min-width: 0; }
+  .next-class .nm { font-size: 17px; font-weight: 600; color: #2f3542; }
+  .next-class .meta { font-size: 12.5px; color: #8b95a3; margin-top: 4px; }
+  .next-class .cd { text-align: right; flex-shrink: 0; }
+  .next-class .cd .n { font-size: 20px; font-weight: 700; color: #3d5a8f; }
+  .next-class .cd .u { font-size: 12px; color: #8b95a3; }
+  .next-class.none .nm { color: #a8b2c0; font-size: 14px; font-weight: 400; }
+
+  /* 周切换 */
+  .week-bar {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+    background: #fff; border: 1px solid #e8ecf1; border-radius: 10px; padding: 9px 14px;
+  }
+  .week-bar button {
+    border: 1px solid #e2e8f1; background: #fff; color: #5a6a85; border-radius: 7px;
+    padding: 5px 13px; font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  .week-bar button:hover { border-color: #b9c8dc; background: #f7fafd; }
+  .week-bar button:disabled { color: #c8d0da; cursor: default; border-color: #eef1f5; }
+  .week-bar .now { flex: 1; text-align: center; font-size: 13.5px; color: #4a5666; }
+  .week-bar .now b { color: #3d5a8f; font-size: 15px; }
+  .week-bar .now .tag {
+    font-size: 11.5px; background: #eef3fa; color: #6b81a8; border-radius: 8px;
+    padding: 2px 9px; margin-left: 7px;
+  }
+  .week-bar .now .tag.odd { background: #fdf2e8; color: #b5762e; }
+
+  /* 课表 */
+  .tt { border: 1px solid #e8ecf1; border-radius: 12px; overflow: hidden; background: #fff; }
+  .tt-head { display: grid; grid-template-columns: 54px repeat(7, 1fr); background: #fafbfd; border-bottom: 1px solid #eef1f5; }
+  .tt-head div {
+    padding: 9px 4px; text-align: center; font-size: 12.5px; color: #7d8896;
+    border-right: 1px solid #eef1f5;
+  }
+  .tt-head div:last-child { border-right: none; }
+  .tt-head .today { color: #3d5a8f; font-weight: 600; background: #f2f6fc; }
+
+  /* 主体：左列节次 + 七列日期，每列内部按节次绝对定位，连堂课能跨格 */
+  .tt-body { display: grid; grid-template-columns: 54px repeat(7, 1fr); position: relative; }
+  .tt-slots { border-right: 1px solid #eef1f5; background: #fafbfd; }
+  .tt-slot {
+    height: 74px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; border-bottom: 1px solid #f4f6f9;
+  }
+  .tt-slot .n { font-size: 12px; color: #8894a3; }
+  .tt-slot .t { font-size: 10.5px; color: #b6c0cc; }
+
+  .tt-col { border-right: 1px solid #eef1f5; position: relative; }
+  .tt-col:last-child { border-right: none; }
+  .tt-col .bg {
+    height: 74px; border-bottom: 1px solid #f4f6f9;
+  }
+  .tt-col .bg.today-col { background: #fbfcfe; }
+
+  .cls {
+    position: absolute; left: 4px; right: 4px; overflow: hidden;
+    background: #f4f7fc; border-left: 3px solid #7d9bc4; border-radius: 5px;
+    padding: 5px 7px; font-size: 11.5px; line-height: 1.45; box-sizing: border-box;
+  }
+  .cls .n { color: #34435c; font-weight: 600; word-break: break-all; }
+  .cls .r { color: #8b95a3; font-size: 11px; margin-top: 2px; word-break: break-all; }
+  .cls .tm { color: #a8b2c0; font-size: 10.5px; margin-top: 2px; }
+  .cls.odd { background: #fdf6ee; border-left-color: #d3a05e; }
+  .cls.even { background: #f0f7f2; border-left-color: #6d9f74; }
+
+  /* 规划 */
+  .plan-item {
+    border-bottom: 1px solid #f2f5f9; padding: 12px 0;
+  }
+  .plan-item:last-child { border-bottom: none; }
+  .plan-head { display: flex; align-items: flex-start; gap: 10px; }
+  .plan-head .body { flex: 1; min-width: 0; }
+  .plan-head .t { font-size: 14.5px; color: #34435c; line-height: 1.5; }
+  .plan-head .meta { font-size: 12px; color: #9aa5b3; margin-top: 3px; }
+  .plan-head .meta .clash { color: #b5762e; }
+  .plan-done .plan-head .t { color: #b0bac6; text-decoration: line-through; }
+  .plan-del {
+    border: 0; background: none; color: #c8d0da; font-size: 12px; cursor: pointer;
+    padding: 3px 7px; font-family: inherit; border-radius: 5px; flex-shrink: 0;
+  }
+  .plan-del:hover { color: #c62828; background: #fdf0f0; }
+
+  .steps { margin: 8px 0 0 0; }
+  .step {
+    display: flex; align-items: center; gap: 8px; padding: 5px 0 5px 6px;
+    font-size: 13.5px; color: #4a5666;
+  }
+  .step-chk {
+    width: 17px; height: 17px; border: 1.5px solid #dcdfe6; border-radius: 5px;
+    cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #fff;
+  }
+  .step.done .step-chk { background: #6d9f74; border-color: #6d9f74; }
+  .step.done .step-text { color: #b0bac6; text-decoration: line-through; }
+  .step-no { font-size: 11px; color: #c0c8d0; width: 12px; flex-shrink: 0; }
+  .step-time {
+    font-size: 11.5px; color: #6b81a8; background: #f0f4fa; border-radius: 6px;
+    padding: 1px 7px; flex-shrink: 0;
+  }
+  .step-time.clash { color: #b5762e; background: #fdf2e8; }
+  .step-text { flex: 1; min-width: 0; }
+  .step-del {
+    border: 0; background: none; color: #d0d8e0; font-size: 13px; cursor: pointer;
+    padding: 1px 6px; font-family: inherit; flex-shrink: 0;
+  }
+  .step-del:hover { color: #c62828; }
+
+  .step-bar { height: 4px; background: #f0f3f7; border-radius: 2px; overflow: hidden; margin-top: 7px; position: relative; }
+  .step-bar-in { position: absolute; left: 0; top: 0; bottom: 0; background: #8fae86; border-radius: 2px; }
+
+  .step-add { display: flex; gap: 7px; margin-top: 8px; }
+  .step-add input {
+    border: 1px solid #e2e8f1; border-radius: 7px; padding: 6px 10px;
+    font-size: 13px; font-family: inherit; outline: none;
+  }
+  .step-add input:focus { border-color: #a8bcd9; }
+  .step-add .step-input { flex: 1; min-width: 0; }
+  .step-add .step-time-input { width: 105px; flex-shrink: 0; }
+
+  .btn {
+    border: 1px solid #e2e8f1; background: #fff; color: #5a6a85; border-radius: 7px;
+    padding: 6px 15px; font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  .btn:hover { border-color: #b9c8dc; background: #f7fafd; }
+  .btn.primary { background: #4a6fa5; border-color: #4a6fa5; color: #fff; }
+  .btn.primary:hover { background: #3f6191; }
+  .btn.sm { padding: 5px 12px; font-size: 12.5px; }
+
+  .form-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .form-row input[type="text"], .form-row input[type="date"] {
+    border: 1px solid #e2e8f1; border-radius: 7px; padding: 8px 11px;
+    font-size: 13.5px; font-family: inherit; outline: none; background: #fff;
+  }
+  .form-row input:focus { border-color: #a8bcd9; }
+
+  .empty-tip { font-size: 13px; color: #b0bac6; padding: 16px 0; text-align: center; }
+
+  /* 冲突提示条 */
+  .tip {
+    display: none; margin-top: 9px; font-size: 12.5px; line-height: 1.6;
+    background: #fdf6ee; border: 1px solid #f0e0cb; color: #9a6428;
+    border-radius: 8px; padding: 8px 12px;
+  }
+  .tip.show { display: block; }
+
+  /* 统计页 */
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 15px; }
+  .stat {
+    background: #fff; border: 1px solid #e8ecf1; border-radius: 12px;
+    padding: 14px 16px; text-align: center;
+  }
+  .stat .l { font-size: 12px; color: #9aa5b3; margin-bottom: 7px; }
+  .stat .v { font-size: 22px; font-weight: 700; color: #34435c; line-height: 1.1; }
+  .stat .v small { font-size: 12px; font-weight: 400; color: #9aa5b3; margin-left: 2px; }
+
+  .prog { margin-bottom: 13px; }
+  .prog-head { display: flex; justify-content: space-between; font-size: 13px; color: #4a5666; margin-bottom: 6px; }
+  .prog-head .num { color: #8b95a3; font-size: 12.5px; }
+  .prog-bar { height: 9px; background: #f0f3f7; border-radius: 5px; overflow: hidden; position: relative; }
+  .prog-bar .in { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; }
+  .prog-note { font-size: 12px; color: #a8b2c0; margin-top: 5px; line-height: 1.55; }
+
+  .cat-line { display: flex; align-items: center; gap: 10px; font-size: 13.5px; margin-bottom: 8px; }
+  .cat-line .nm { width: 60px; color: #5a6a85; flex-shrink: 0; }
+  .cat-line .tr { flex: 1; height: 9px; background: #f0f3f7; border-radius: 5px; overflow: hidden; position: relative; }
+  .cat-line .fl { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; }
+  .cat-line .hr { width: 82px; text-align: right; color: #8b95a3; font-size: 12.5px; flex-shrink: 0; }
+
+  /* 课表编辑 */
+  .form-row label { font-size: 13px; color: #5a6a85; }
+  .form-row input[type="number"], .form-row input[type="time"], .form-row select {
+    border: 1px solid #e2e8f1; border-radius: 7px; padding: 8px 11px;
+    font-size: 13.5px; font-family: inherit; outline: none; background: #fff;
+  }
+  .form-row input:focus, .form-row select:focus { border-color: #a8bcd9; }
+  .ed-sep { color: #a8b2c0; font-size: 13px; }
+
+  .ed-slot-row {
+    display: flex; align-items: center; gap: 8px; padding: 6px 0;
+    font-size: 13.5px; color: #4a5666; flex-wrap: wrap;
+  }
+  .ed-slot-row .no { width: 56px; color: #8b95a3; flex-shrink: 0; }
+  .ed-slot-row input[type="time"] {
+    border: 1px solid #e2e8f1; border-radius: 7px; padding: 6px 9px;
+    font-size: 13.5px; font-family: inherit; outline: none; background: #fff;
+  }
+  .ed-slot-row input[type="time"]:focus { border-color: #a8bcd9; }
+  .ed-slot-row .dash { color: #a8b2c0; }
+
+  .ed-course-row {
+    display: flex; align-items: center; gap: 10px; padding: 9px 0;
+    border-bottom: 1px solid #f2f5f9; font-size: 13.5px;
+  }
+  .ed-course-row:last-child { border-bottom: none; }
+  .ed-course-row .n { font-weight: 600; color: #34435c; flex-shrink: 0; }
+  .ed-course-row .meta { flex: 1; min-width: 0; color: #8b95a3; font-size: 12.5px; }
+  .ed-course-row .wk {
+    flex-shrink: 0; font-size: 11.5px; background: #eef3fa; color: #6b81a8;
+    border-radius: 8px; padding: 2px 9px;
+  }
+  .ed-course-row .wk.odd { background: #fdf2e8; color: #b5762e; }
+  .ed-course-row .wk.even { background: #f0f7f2; color: #5f8f66; }
+
+  #edCourseForm {
+    background: #fafbfd; border: 1px solid #eef1f5; border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 10px;
+  }
+  #edCourseForm .form-row { margin-bottom: 8px; }
+  #edCourseForm .form-row:last-child { margin-bottom: 0; }
+  #edCourseForm input:focus, #edCourseForm select:focus { border-color: #a8bcd9; }
+</style>
+<link rel="stylesheet" href="../../shared/rail.css?v=11">
+<link rel="stylesheet" href="../../shared/settings.css">
+<link rel="stylesheet" href="../../shared/mobile.css?v=11">
+  <link rel="stylesheet" href="../../shared/theme.css">
+  <style>
+    /* 液态玻璃统一主题（2026-10-27）：只换材质，布局、尺寸、配色关系一律不动 */
+    .topbar {
+      background: var(--wb-glass-bg-soft);
+      border-bottom: 1px solid var(--wb-glass-line-soft);
+      backdrop-filter: var(--wb-glass-blur);
+      -webkit-backdrop-filter: var(--wb-glass-blur);
+    }
+    .card, .stat {
+      background: var(--wb-glass-bg);
+      border: 1px solid var(--wb-glass-line);
+      backdrop-filter: var(--wb-glass-blur);
+      -webkit-backdrop-filter: var(--wb-glass-blur);
+      box-shadow: var(--wb-glass-shadow);
+    }
+    .tt {
+      background: var(--wb-glass-bg-soft);
+      border: 1px solid var(--wb-glass-line);
+      backdrop-filter: blur(18px) saturate(150%);
+      -webkit-backdrop-filter: blur(18px) saturate(150%);
+    }
+    /* 主按钮同理，保持自己的强调底色 */
+    .btn:not(.primary), .week-bar button {
+      background: var(--wb-glass-bg-soft);
+      border-color: var(--wb-glass-line-soft);
+      backdrop-filter: blur(14px) saturate(150%);
+      -webkit-backdrop-filter: blur(14px) saturate(150%);
+    }
+
+  /* ---------- 导入课表 ---------- */
+  .import-hint { font-size: 12.5px; color: #8c96a4; line-height: 1.6; margin: 8px 0; }
+  /* 识别到的作息时间：浅色底小字，和课程列表区分开 */
+  .import-slots {
+    font-size: 12.5px; line-height: 1.8; color: #4a6076;
+    background: #eef3fa; border-radius: 8px; padding: 8px 10px; margin: 8px 0;
+  }
+  .import-slots b { color: #2f4a68; font-weight: 600; }
+  .imp-slot-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .imp-slot-hint { font-size: 11.5px; color: #8aa0b8; }
+  /* 作息每一行：节次 + 两个时间框，手机上点得准 */
+  .imp-slot-line {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 4px; font-size: 12.5px; color: #4a6076;
+  }
+  .imp-slot-line .dash { color: #9aa9b8; }
+  .import-slots input[type="time"] {
+    flex: 1; min-width: 0; height: 32px; padding: 0 6px;
+    border: 1px solid #cfdcea; border-radius: 7px;
+    background: #fff; color: #2f4a68; font-size: 13px; font-family: inherit;
+  }
+  /* 课程项里的节次数字：小方块，改起来顺手 */
+  .imp-line { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+  /* 星期下拉：和节次框一样高，一行摆得下 */
+  .imp-day {
+    height: 32px; padding: 0 4px; margin-right: 2px;
+    border: 1px solid #cfdcea; border-radius: 7px;
+    background: #fff; color: #2f4a68; font-size: 14px; font-family: inherit;
+  }
+  .imp-num {
+    width: 46px; height: 32px; text-align: center; padding: 0 2px;
+    border: 1px solid #cfdcea; border-radius: 7px;
+    background: #fff; color: #2f4a68; font-size: 14px; font-family: inherit;
+  }
+  .import-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+  #importText {
+    width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid #dde3ea; background: #fff; font-family: inherit;
+    font-size: 13px; line-height: 1.6; resize: vertical; color: #37414f;
+  }
+  .import-list { list-style: none; margin: 8px 0 0; padding: 0; }
+  .import-list li {
+    display: flex; align-items: flex-start; gap: 8px; padding: 9px 10px;
+    border-radius: 10px; background: rgba(255,255,255,.7); border: 1px solid #e6ebf2;
+    margin-bottom: 6px; font-size: 13px; line-height: 1.5;
+  }
+  .import-list .imp-main { flex: 1; min-width: 0; }
+  .import-list .imp-when { color: #3d5a8f; font-weight: 600; }
+  .import-list .imp-room { color: #8c96a4; font-size: 12px; }
+  .import-list .imp-del {
+    flex: 0 0 auto; border: 0; background: transparent; color: #c26a6a;
+    font-size: 12px; cursor: pointer; padding: 2px 4px; font-family: inherit;
+  }
+  </style>
+</head>
+<body data-rail-current="time" class="has-wrail">
+
+<div class="topbar">
+  <h1>时间管理</h1>
+  <div class="tabs">
+    <button class="tab active" data-tab="timetable">课表</button>
+    <button class="tab" data-tab="plans">规划</button>
+    <button class="tab" data-tab="time">时间</button>
+    <button class="tab" data-tab="stats">统计</button>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- 课表 -->
+  <div class="view active" id="viewTimetable">
+    <div class="next-class" id="nextClass"></div>
+    <div class="week-bar">
+      <button id="weekPrev">上一周</button>
+      <div class="now" id="weekNow"></div>
+      <button id="weekNext">下一周</button>
+      <button id="btnEditTimetable">编辑课表</button>
+    </div>
+    <div class="tip" id="ttTip"></div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tt" id="timetable"></div>
+    </div>
+  </div>
+
+  <!-- 课表编辑 -->
+  <div class="view" id="viewEdit">
+
+    <!-- 导入课表：截图识别、选文件、粘贴文字，识别结果先列出来核对 -->
+    <div class="card" id="importCard">
+      <div class="card-title">
+        <span>导入课表</span>
+        <button class="btn sm" id="btnImportToggle">展开</button>
+      </div>
+      <div id="importBox" style="display:none;">
+        <p class="import-hint">发一张课表截图，或者选一个文件。识别出来的课会先列在下面，核对没问题再加入课表。</p>
+        <div class="import-row">
+          <button class="btn sm" id="btnPickImage">选课表截图</button>
+          <button class="btn sm" id="btnPickFile">选文件</button>
+        </div>
+        <input type="file" id="fileImage" accept="image/*" style="display:none;">
+        <input type="file" id="fileDoc" accept=".txt,.csv,.json,text/plain,application/json" style="display:none;">
+        <p class="import-hint">也可以把课表文字粘贴到这里。一行一门课，比如「周一 1-3节 高等数学 3-201」。</p>
+        <textarea id="importText" rows="3" placeholder="周一 1-3节 高等数学 3-201&#10;周二 5-6节 大学英语 2-204"></textarea>
+        <div class="import-row">
+          <button class="btn sm" id="btnParseText">解析这段文字</button>
+        </div>
+        <div class="tip" id="importTip"></div>
+        <div class="import-slots" id="importSlots" style="display:none;"></div>
+        <ul class="import-list" id="importList"></ul>
+        <div class="import-row" id="importApplyRow" style="display:none;">
+          <button class="btn primary" id="btnImportApply">全部加入课表</button>
+          <button class="btn" id="btnImportClear">清空</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>学期</span></div>
+      <div class="form-row">
+        <label for="edFirst">第一周周一</label>
+        <input type="date" id="edFirst">
+        <label for="edTotalWeeks">一共</label>
+        <input type="number" id="edTotalWeeks" min="1" max="40" style="width:74px;">
+        <span class="ed-sep">周</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>作息节次</span>
+        <button class="btn sm" id="btnEdAddSlot">加一节</button>
+      </div>
+      <div id="edSlotList"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>课程</span>
+        <button class="btn sm" id="btnEdAddCourse">加一门课</button>
+      </div>
+      <div class="tip" id="edFormTip"></div>
+      <div id="edCourseForm"></div>
+      <div id="edCourseList"></div>
+    </div>
+
+    <div class="tip" id="edTip"></div>
+
+    <div class="form-row" style="margin-top:15px;">
+      <button class="btn primary" id="btnEdSave">保存课表</button>
+      <button class="btn" id="btnEdCancel">取消</button>
+      <button class="btn" id="btnEdReset">恢复默认课表</button>
+      <button class="btn" id="btnEdExport">导出备份</button>
+      <span style="font-size:12px;color:#b0bac6;">改完点保存才生效，取消就当没改过</span>
+    </div>
+  </div>
+
+  <!-- 规划 -->
+  <div class="view" id="viewPlans">
+    <div class="card">
+      <div class="card-title"><span>加一条规划</span></div>
+      <div class="form-row">
+        <input type="text" id="planText" placeholder="要做什么，比如 去杭州两日游" style="flex:1;min-width:220px;">
+        <input type="date" id="planFrom" title="开始日期">
+        <span style="color:#a8b2c0;font-size:13px;">到</span>
+        <input type="date" id="planTo" title="结束日期">
+        <button class="btn primary" id="btnAddPlan">加上</button>
+      </div>
+      <div class="tip" id="planTip"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>全部规划</span>
+        <span id="planCount" style="font-size:12px;color:#b0bac6;"></span>
+      </div>
+      <div id="planList"></div>
+    </div>
+  </div>
+
+  <!-- 时间 -->
+  <div class="view" id="viewTime">
+    <div class="card">
+      <div class="card-title"><span>记一笔时间</span></div>
+      <div class="form-row">
+        <input type="time" id="tStart" value="09:00" style="width:110px;">
+        <span style="color:#a8b2c0;font-size:13px;">到</span>
+        <input type="time" id="tEnd" value="10:00" style="width:110px;">
+        <select id="tCat" style="border:1px solid #e2e8f1;border-radius:7px;padding:8px 11px;font-size:13.5px;font-family:inherit;background:#fff;outline:none;"></select>
+        <input type="text" id="tWhat" placeholder="做了什么（可不填）" style="flex:1;min-width:150px;">
+        <button class="btn primary" id="btnAddTime">记下</button>
+      </div>
+      <div class="tip" id="timeTip"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>今天的记录</span>
+        <span id="timeSum" style="font-size:12.5px;color:#8b95a3;"></span>
+      </div>
+      <div id="dayList"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>今天各类占多少</span></div>
+      <div id="catBar"></div>
+    </div>
+  </div>
+
+  <!-- 统计 -->
+  <div class="view" id="viewStats">
+    <div class="stat-grid">
+      <div class="stat"><div class="l">本周课时</div><div class="v" id="stClass">0<small>节</small></div></div>
+      <div class="stat"><div class="l">本周记了</div><div class="v" id="stRecorded">0<small>节</small></div></div>
+      <div class="stat"><div class="l">本周可支配</div><div class="v" id="stFree">0<small>小时</small></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>这周还剩多少可支配时间</span></div>
+      <div id="freeProg"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>课表与实际记录</span></div>
+      <div id="clashBox"></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="../../shared/store.js?v=18"></script>
+<script src="timetable-data.js"></script>
+<script src="app.js"></script>
+<script src="../../modules.js"></script>
+<script src="../../shared/side.js"></script>
+<script src="../../shared/settings.js"></script>
+<script src="../../shared/rail.js?v=11"></script>
+<script src="../../shared/sync.js?v=20"></script>
+</body>
+</html>

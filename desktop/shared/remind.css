@@ -1,0 +1,132 @@
+/* 应用内提醒横幅
+ *
+ * 放在右下角：顶部是胶囊导航，右上角是窗口按钮，只有右下角长期空着。
+ * 也跟 Windows 通知弹的方向一致，用户找得到。
+ */
+
+.wremind-stack {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 10000;                /* 番茄钟全屏层是 9999，提醒得压得住它 */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;          /* 空着的部分别挡鼠标，只有卡片本身能点 */
+}
+
+.wremind {
+  pointer-events: auto;
+  position: relative;
+  width: 328px;
+  max-width: calc(100vw - 40px);
+  padding: 13px 15px 14px 16px;
+  border-radius: 14px;
+  background: #fffdfa;
+  border: 1px solid rgba(150, 120, 95, .16);
+  box-shadow: 0 12px 28px rgba(90, 66, 48, .18), 0 2px 6px rgba(90, 66, 48, .08);
+  overflow: hidden;
+  animation: wremind-in .34s cubic-bezier(.22, .9, .3, 1) both;
+}
+
+.wremind.out {
+  animation: wremind-out .22s ease-in both;
+}
+
+/* 左侧一道暖色竖条，代替图标，省一张图 */
+.wremind::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, #e79a63, #d9784a);
+}
+
+.wremind-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wremind-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #3b2f27;
+  letter-spacing: .2px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wremind-close {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #a08a79;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.wremind-close:hover {
+  background: rgba(150, 120, 95, .12);
+  color: #5c473a;
+}
+
+.wremind-body {
+  margin-top: 5px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #7d6a5c;
+  word-break: break-word;
+}
+
+/* 底边这条是剩余时间，一眼看得出它快没了 */
+.wremind-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, #e79a63, #e7c39a);
+  transform-origin: left center;
+  animation: wremind-bar linear forwards;
+}
+
+.wremind:hover .wremind-bar {
+  animation-play-state: paused;
+}
+
+@keyframes wremind-in {
+  from { opacity: 0; transform: translateX(24px) scale(.97); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes wremind-out {
+  from { opacity: 1; transform: translateX(0); max-height: 200px; }
+  to   { opacity: 0; transform: translateX(18px); max-height: 0; margin-bottom: -10px; }
+}
+
+@keyframes wremind-bar {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* 窗口窄的时候别贴满整屏 */
+@media (max-width: 620px) {
+  .wremind-stack { right: 12px; bottom: 12px; left: 12px; align-items: stretch; }
+  .wremind { width: auto; }
+}

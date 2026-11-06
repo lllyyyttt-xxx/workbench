@@ -1,0 +1,65 @@
+{
+  "name": "workbench-desktop",
+  "version": "1.0.0",
+  "description": "个人工作台桌面版",
+  "main": "main.js",
+  "type": "commonjs",
+  "author": "workbench",
+  "scripts": {
+    "start": "electron .",
+    "selftest": "electron . --selftest",
+    "pack": "electron-builder --win dir --x64",
+    "portable": "electron-builder --win portable --x64",
+    "build": "electron-builder --win dir portable --x64"
+  },
+  "devDependencies": {
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.workbench.desktop",
+    "productName": "工作台",
+    "asar": true,
+    "electronFuses": {
+      "enableEmbeddedAsarIntegrityValidation": false
+    },
+    "compression": "normal",
+    "directories": {
+      "output": "../dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "icon.js",
+      "msix.js",
+      "pngdec.js",
+      "search.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../desktop",
+        "to": "workbench",
+        "filter": [
+          "**/*",
+          "!**/verify*.js",
+          "!**/run_all_verify.js",
+          "!**/_*probe*.html",
+          "!**/_profile*",
+          "!**/*.map"
+        ]
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        { "target": "dir", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "portable": {
+      "artifactName": "workbench-portable-win-x64.exe"
+    }
+  }
+}
