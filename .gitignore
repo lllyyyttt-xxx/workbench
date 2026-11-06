@@ -1,0 +1,60 @@
+# 依赖
+node_modules/
+package-lock.json
+
+# 构建产物
+dist/
+dist-portable/
+dist-lite/
+*.exe
+*.msi
+
+# Netlify 本地状态（含站点 ID，不要公开）
+.netlify/
+
+# 浏览器自动化测试产生的用户数据（含书签、历史、保存的密码）
+_profile_test/
+_vg_profile/
+*-profile/
+*Profile/
+
+# 密钥与环境配置
+.env
+.env.*
+*.key
+*.pem
+secrets/
+
+# 本地数据文件
+workbench-data.json
+sync-*.json
+__accounts.json
+
+# 临时与调试产物
+# 注意：下面这条会命中 web/netlify/functions/_store.js 和 _wbcommon.js，
+# 而那两个是 sync.js 的正式依赖，必须用 ! 规则放行，否则 clone 下来后端跑不起来。
+_*.js
+!web/netlify/functions/_*.js
+_*.html
+_*.png
+_*.xml
+*.bak
+*.bak-*
+*.log
+*.tmp
+.seed/
+_share/
+_archive_*/
+_清理归档_*/
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 打包缓存
+*.asar
+*.blob
+cache/
