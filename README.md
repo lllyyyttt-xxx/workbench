@@ -10,6 +10,8 @@
 [![Release](https://img.shields.io/github/v/release/lllyyyttt-xxx/workbench?label=release)](https://github.com/lllyyyttt-xxx/workbench/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Web-lightgrey.svg)](#下载)
 
+官网（功能截图、常见问题）：<https://lllyyyttt-xxx.github.io/>
+
 <img src="docs/shot-home.webp" width="880" alt="工作台首页">
 
 </div>
