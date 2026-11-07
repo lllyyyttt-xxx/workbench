@@ -1,0 +1,75 @@
+/* 设置面板共享样式（shared/settings.js 生成面板用的）
+ * 从首页 index.html 抽出来的，两边保持一致。
+ */
+#settingsPanel {
+  position: fixed; top: 0; right: 0; height: 100vh; width: 340px; max-width: 90vw;
+  background: rgba(255,255,255,.82);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-left: 1px solid rgba(255,255,255,.85);
+  box-shadow: -8px 0 40px rgba(31,38,52,.12), inset 1px 0 0 rgba(255,255,255,.7);
+  transform: translateX(100%); transition: transform .22s ease; z-index: 30;
+  display: flex; flex-direction: column;
+}
+#settingsPanel.show { transform: translateX(0); }
+.set-head {
+  padding: 18px 20px; border-bottom: 1px solid #f0f0f0;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.set-head h2 { font-size: 15px; font-weight: 600; }
+.set-body { padding: 18px 20px; overflow-y: auto; flex: 1; }
+.set-block { margin-bottom: 24px; }
+.set-block h3 { font-size: 13px; color: #888; font-weight: 500; margin-bottom: 10px; }
+.set-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.set-row button {
+  flex: 1; padding: 8px 0; border-radius: 6px; border: 1px solid #ddd;
+  background: #fff; font-size: 13px; color: #444; cursor: pointer;
+}
+.set-row button:hover { border-color: #00897b; color: #00897b; }
+.dim { color: #999; font-size: 12px; line-height: 1.6; }
+#storeInfo { font-size: 13px; color: #2b2b2b; }
+#storeWarn {
+  display: none; margin-top: 8px; font-size: 12px; color: #c62828;
+  background: #ffebee; border-radius: 6px; padding: 8px 10px; line-height: 1.5;
+}
+#moduleData { list-style: none; }
+#moduleData li {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px;
+}
+#moduleData button {
+  border: 1px solid #eee; background: #fff; color: #c62828; border-radius: 4px;
+  padding: 3px 9px; font-size: 12px; cursor: pointer;
+}
+#moduleData button:hover { border-color: #ef9a9a; }
+.cfg-input {
+  width: 100%; border: 1px solid #e2e2e2; border-radius: 7px; padding: 8px 11px;
+  font-size: 13px; font-family: inherit; outline: none; resize: vertical;
+}
+.cfg-input:focus { border-color: #b39ddb; }
+.auto-row { display: flex; gap: 8px; }
+.auto-opt {
+  flex: 1; padding: 8px 0; border-radius: 6px; border: 1px solid #ddd;
+  background: #fff; font-size: 13px; color: #444; cursor: pointer;
+  font-family: inherit;
+}
+.auto-opt:hover { border-color: #8e7cc3; color: #6a5aa8; }
+.auto-opt.on {
+  background: #efeaf9; border-color: #8e7cc3; color: #5e4a9e; font-weight: 600;
+}
+.rename-list { list-style: none; }
+.rename-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px;
+}
+.rename-row:last-child { border-bottom: none; }
+.rename-label { width: 88px; color: #666; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rename-row input {
+  flex: 1; min-width: 0; border: 1px solid #ddd; border-radius: 6px;
+  padding: 6px 9px; font-size: 13px; font-family: inherit; outline: none;
+}
+.icon-btn {
+  border: 1px solid #ddd; background: #fff; color: #555; border-radius: 7px;
+  padding: 5px 12px; font-size: 12.5px; cursor: pointer; font-family: inherit;
+}
+.icon-btn:hover { border-color: #bbb; color: #222; }

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块名</title>
+<style>
+  /* 这个模块的样式只写在这里，不要影响别的模块 */
+  body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background: #f5f6f7; padding: 40px; }
+  .back-home {
+    display: inline-block; font-size: 13px; color: #00897b; text-decoration: none;
+    padding: 4px 10px; border: 1px solid #cfe8e3; border-radius: 6px; margin-bottom: 20px;
+  }
+  .back-home:hover { background: #e0f2f1; }
+</style>
+</head>
+<body>
+<a class="back-home" href="../../index.html">← 工作台</a>
+
+<h1>模块名</h1>
+
+<script src="../../shared/store.js?v=20"></script>
+<script src="../../shared/summary.js"></script>
+<script>
+  /* 每个模块用自己的命名空间，数据互不影响。
+     这个标识要和 modules.js 里那条模块的 id 写成一样的。 */
+  var MODULE_NS = '模块标识';
+  var store = WorkbenchStore.namespace(MODULE_NS);
+
+  // 读写示例
+  store.set('demo', { hello: 1 });
+  var data = store.get('demo', {});
+  console.log('当前模块数据：', data, '保存位置：', WorkbenchStore.backend);
+
+  /* ---------- 给首页助手用的摘要（重要）----------
+   *
+   * 首页的 AI 助手靠这段话回答「我的XX怎么样了」这类问题。
+   * 两件事要做：
+   *
+   * 1）在 shared/summary.js 的 SUMMARY 里加一条，直接从存储读数据算摘要。
+   *    这一步是必须的，因为模块是独立页面，首页打开时你的脚本不在。
+   *
+   *    SUMMARY.模块标识 = function () {
+   *      var s = global.WorkbenchStore.namespace('模块标识');
+   *      var list = s.get('列表', []) || [];
+   *      if (!list.length) return '';          // 没数据就返回空
+   *      return '一共 ' + list.length + ' 条';   // 一两句，300 字以内
+   *    };
+   *
+   * 2）如果你想在模块页面里覆盖默认算法，可以在这里注册。
+   *    没有特殊需要就不要写，留空即可。
+   */
+  // WorkbenchSummary.register(MODULE_NS, function () {
+  //   return '这里返回一句话摘要';
+  // });
+
+  /* ---------- 摘要写法要点 ----------
+   * · 只说关键数字，不要罗列全部内容
+   * · 别超过 300 字，超了会被截断
+   * · 出错不要抛异常，返回空字符串就行
+   * · 数据为空时返回空字符串，助手会自动跳过这个模块
+   */
+</script>
+</body>
+</html>

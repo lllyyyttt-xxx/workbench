@@ -1,0 +1,71 @@
+# Netlify 部署配置
+#
+# 这个是纯静态站点，没有构建步骤，直接把 workbench-mobile 这个目录传上去就能用。
+# 另外把 /api/ai 指到一个转发函数上，AI 的密钥就留在后台，网页里看不到。
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+  command = ""
+
+# 网页请求 /api/ai，实际由 netlify/functions/ai.js 处理
+[[redirects]]
+  from = "/api/ai"
+  to = "/.netlify/functions/ai"
+  status = 200
+  force = true
+
+# 网页请求 /api/sync/...，由 netlify/functions/sync.js 转发给 GitHub API（手机直连 GitHub 不通时的通道）
+[[redirects]]
+  from = "/api/sync/*"
+  to = "/.netlify/functions/sync"
+  status = 200
+  force = true
+
+# 账号注册 / 登录（朋友用，只需要名字 + 4 位访问码）
+[[redirects]]
+  from = "/api/account"
+  to = "/.netlify/functions/account"
+  status = 200
+  force = true
+
+# 静态资源缓存：图片字体这些放久一点，页面本身不要缓存，改了立刻生效
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/shared/*"
+  [headers.values]
+    Cache-Control = "public, max-age=60"
+
+[[headers]]
+  for = "/modules/*"
+  [headers.values]
+    Cache-Control = "public, max-age=600"
+
+# 别把源码和测试脚本暴露在公网上（函数真正入口在 /.netlify/functions/*，不受影响）
+[[redirects]]
+  from = "/netlify/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/verify_*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/sync-debug.html"
+  to = "/404.html"
+  status = 404
+  force = true
